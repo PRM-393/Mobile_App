@@ -1,0 +1,39 @@
+{
+  "expo": {
+    "name": "Voucher Platform",
+    "slug": "voucher-platform-mobile",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.voucherplatform.mobile",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Ung dung can quyen camera de quet ma QR khi thanh toan tai cua hang.",
+        "NSLocationWhenInUseUsageDescription": "Ung dung can vi tri de tim voucher gan ban (FR-SEARCH-05/06)."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#2563EB"
+      },
+      "package": "com.voucherplatform.mobile",
+      "permissions": ["CAMERA", "ACCESS_FINE_LOCATION", "ACCESS_COARSE_LOCATION", "NOTIFICATIONS"]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": ["expo-secure-store", "expo-location", "expo-notifications"],
+    "extra": {
+      "apiBaseUrl": "http://localhost:3000/api"
+    }
+  }
+}
