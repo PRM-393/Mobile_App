@@ -18,17 +18,19 @@ export const useAuthStore = create<AuthState>((set) => ({
   refreshToken: null,
   isHydrated: false,
 
-  // Doc token da luu trong SecureStore khi app khoi dong (giu dang nhap qua cac phien)
+  // Doc token + user da luu trong SecureStore khi app khoi dong (giu dang nhap qua cac phien)
   hydrate: async () => {
-    const [accessToken, refreshToken] = await Promise.all([
+    const [accessToken, refreshToken, user] = await Promise.all([
       secureStorage.getAccessToken(),
       secureStorage.getRefreshToken(),
+      secureStorage.getUser<AuthUser>(),
     ]);
-    set({ accessToken, refreshToken, isHydrated: true });
+    set({ accessToken, refreshToken, user, isHydrated: true });
   },
 
   setSession: async (user, tokens) => {
     await secureStorage.saveTokens(tokens.accessToken, tokens.refreshToken);
+    await secureStorage.saveUser(user);
     set({ user, accessToken: tokens.accessToken, refreshToken: tokens.refreshToken });
   },
 
