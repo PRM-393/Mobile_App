@@ -1,88 +1,92 @@
-# Voucher Platform Mobile (Customer App)
+# Mobile_App – Ứng dụng khách hàng (Flutter)
 
-Ung dung di dong danh cho **khach hang**, xay dung bang **React Native + Expo (managed workflow)
-+ TypeScript**. Day la du an duoc uu tien nhat trong 3 repo ("du an tap trung vao mobile" theo
-SRS), nen scaffold nay dau tu day du nhat vao cau truc dieu huong va man hinh.
+Ứng dụng di động cho **Khách hàng** của Nền tảng bán và sử dụng voucher đa thương hiệu (môn PRM393).
+Viết bằng **Flutter (Dart)** theo học liệu môn học. Tài liệu đặc tả: `Document/SRS-Voucher-Platform.docx` (v1.1).
 
-## Cai dat va chay
+| Thành phần | Công nghệ |
+|---|---|
+| Ngôn ngữ / framework | Dart 3, Flutter 3 (Material 3) |
+| Quản lý trạng thái | `provider` (ChangeNotifier, MultiProvider) |
+| Điều hướng | Named routes + `onGenerateRoute` (Navigator 1.0), chặn màn cần đăng nhập |
+| Gọi API | `http` qua một `ApiClient` dùng chung, tự làm mới token khi 401 |
+| Lưu phiên | `flutter_secure_storage` (Keystore / Keychain) |
+| Vị trí | `geolocator` (tìm voucher gần đây, FR-SEARCH) |
+| QR | `qr_flutter` (hiện mã QR động 60 giây) |
+| Thông báo | `flutter_local_notifications` |
+| Định dạng | `intl` (tiền VND, giờ UTC+7) |
+
+## Chạy dự án
+
+Yêu cầu: Flutter SDK 3.x, Android Studio (emulator) hoặc thiết bị thật, máy chủ `Web_BE` đang chạy.
 
 ```bash
-npm install
-cp .env.example .env      # EXPO_PUBLIC_API_BASE_URL tro ve NestJS API
-npm run typecheck          # tsc --noEmit, khong loi
-npm run start               # expo start -> quet QR bang Expo Go, hoac nhan 'a' / 'i' cho may ao
+flutter pub get
+flutter run --dart-define=API_BASE_URL=http://10.0.2.2:3000/api
 ```
 
-Chay `expo start` doi hoi may co ket noi mang va (tuy chon) tai khoan Expo; khong bat buoc trong
-moi truong phat trien nay — `npm install` va `npm run typecheck` la hai lenh duoc dung de xac
-nhan scaffold hop le.
+- `10.0.2.2` là địa chỉ máy host khi chạy trên Android emulator (mặc định nếu không truyền).
+- Thiết bị thật: dùng IP LAN của máy chạy BE, ví dụ `http://192.168.1.10:3000/api`.
+- Không hard-code địa chỉ máy chủ trong mã nguồn (NFR-MNT-02).
 
-## Vi sao Expo (managed workflow)
+Kiểm tra trước khi tạo PR:
 
-- Scaffold nhanh, cau hinh it, build duoc ca Android (uu tien - CON-01) va iOS tu cung mot codebase.
-- `expo-secure-store`, `expo-location`, `expo-notifications` co san san dang, khop voi cac yeu cau
-  luu token an toan, xin quyen vi tri ("gan toi" - FR-SEARCH-06) va push notification (FR-ENGAGE-06)
-  ma khong can tu cau hinh native module.
-- Neu ve sau can native module ngoai pham vi Expo SDK, co the `expo prebuild` de chuyen sang bare
-  workflow ma khong phai viet lai ung dung.
-
-## Cau truc thu muc
-
-```
-App.tsx                      # entry: NavigationContainer, hydrate phien dang nhap, gate Auth/Main
-src/
-  navigation/
-    types.ts                  # kieu cho AuthStack, MainTab, RootStack
-    AuthNavigator.tsx           # Login -> OtpVerify (FR-AUTH-01/02)
-    MainTabNavigator.tsx         # 5 tab: Kham pha, Tim kiem, Vi voucher, Don hang, Ca nhan
-    RootNavigator.tsx             # tab chinh + man hinh day: VoucherDetail, Checkout, RedeemQr,
-                                    # RefundRequest, Review, Notifications, Favorites
-  screens/
-    auth/          LoginScreen, OtpVerifyScreen
-    home/           HomeScreen (danh muc + voucher moi - FR-SEARCH-01/04)
-    search/          SearchScreen (tu khoa, "gan toi" voi expo-location - FR-SEARCH-02/03/05/06)
-    voucher/          VoucherDetailScreen (FR-SEARCH-07)
-    checkout/          CheckoutScreen (tao don, giu ton kho 15p - FR-ORDER-01..04)
-    wallet/             WalletScreen (vi voucher chia tab - FR-REDEEM-01)
-    redeem/              RedeemQrScreen (QR dong 60s + OTP, dem nguoc - FR-REDEEM-02/03)
-    orders/               OrderHistoryScreen (FR-ORDER-09)
-    refund/                RefundRequestScreen (UC-03, BR-05)
-    favorites/              FavoritesScreen, ReviewScreen (FR-ENGAGE-01/02/03)
-    notifications/            NotificationsScreen (FR-ENGAGE-06)
-    profile/                   ProfileScreen
-  components/          Button, Card, VoucherCard, CountdownTimer, ScreenContainer
-  services/
-    apiClient.ts         # axios: gan Bearer token, tu refresh khi 401
-    secureStorage.ts       # luu access/refresh token + user bang expo-secure-store (Keychain/Keystore)
-    authApi.ts, voucherApi.ts
-  store/                 # Zustand: authStore (phien dang nhap), cartStore
-  hooks/
-    usePushNotifications.ts # xin quyen, lay Expo push token, dang ky voi BE (FR-ENGAGE-06/07)
-  utils/
-    currency.ts            # formatVND, formatDateTime (Asia/Ho_Chi_Minh)
-    distance.ts              # Haversine + RADIUS_OPTIONS_KM cho "gan toi" (FR-SEARCH-05/06)
-  theme/                    # mau sac, khoang cach dung chung
-  types/                     # AuthUser, VoucherCampaign, Order, VoucherItem, RefundRequest...
+```bash
+flutter analyze
+flutter test
 ```
 
-## Quyet dinh ky thuat
+Bản phát hành: `flutter build apk --release --dart-define=API_BASE_URL=<địa chỉ máy chủ>`.
 
-- **State**: Zustand (nhe hon Redux Toolkit cho pham vi 7 tuan); `authStore` tu dong hydrate tu
-  `expo-secure-store` khi mo app de giu dang nhap qua cac phien.
-- **Luu token**: `expo-secure-store` (Keychain tren iOS, Keystore tren Android) thay vi AsyncStorage
-  vi luu du lieu nhay cam (JWT).
-- **Redeem QR**: `RedeemQrScreen` goi `POST /redeem/token` de lay `qrPayload` + `otpCode`, dem
-  nguoc 60 giay bang `CountdownTimer` va tu dong lam moi khi het han (FR-REDEEM-02, BR-06). Viec
-  render QR thanh hinh anh that (vd. `react-native-qrcode-svg`) va quet QR o phia nhan vien cua
-  hang (web) la `// TODO` ro rang trong code.
-- **Vi tri "gan toi"**: `expo-location` xin quyen `WhenInUse`; neu bi tu choi, ung dung hien danh
-  sach mac dinh kem thong bao (FR-SEARCH-06) thay vi chan man hinh.
+## Cấu trúc thư mục
 
-## TODO nghiep vu chinh con lai (xem comment trong code)
+```
+lib/
+  main.dart              # khởi tạo service, khôi phục phiên, đăng ký MultiProvider
+  routes.dart            # AppRoutes: tên route, onGenerateRoute, chặn route cần đăng nhập
+  config/env.dart        # API_BASE_URL đọc từ --dart-define
+  theme/app_theme.dart   # màu, khoảng cách, ThemeData dùng chung
+  models/                # lớp dữ liệu + fromJson (campaign, order, engage, auth_user)
+  services/              # ApiClient, TokenStorage, AuthService, các service nghiệp vụ, NotificationService
+  providers/             # AuthProvider, SearchProvider, WalletProvider, MainTabController
+  screens/               # mỗi nhóm tính năng một thư mục
+  widgets/               # widget tái sử dụng (VoucherCard, CountdownTimer, ...)
+  utils/                 # định dạng tiền / ngày giờ, tính khoảng cách
+test/
+  unit/                  # test hàm thuần và model
+  widget/                # test widget (form đăng nhập, đếm ngược QR)
+```
 
-- Render QR that tu `qrPayload` (`RedeemQrScreen`).
-- Endpoint `GET /wallet` tra ve VoucherItem cua khach theo tab chua co trong BE scaffold — can bo
-  sung o BE (`walletApi` trong `voucherApi.ts` da co san phia client, dang tro toi `/wallet`).
-- Mo WebView toi `paymentUrl` va xu ly deep link ket qua thanh toan trong `CheckoutScreen`.
-- Cau hinh Firebase that (google-services.json) truoc khi build native cho push notification.
-- Man hinh chinh sua ho so (`ProfileScreen`) con la placeholder.
+Quy ước bắt buộc:
+
+1. **Widget không gọi `http` trực tiếp.** Luồng luôn là `Screen → Provider/Service → ApiClient`.
+2. Trạng thái dùng chung giữa nhiều màn (đăng nhập, ví, tìm kiếm) đặt trong Provider; trạng thái cục bộ của một form dùng `StatefulWidget`.
+3. Thêm màn mới: tạo trong `screens/<nhóm>/`, khai báo tên ở `AppRoutes`, thêm vào `protected` nếu cần đăng nhập. Mở màn bằng `AppRoutes.push(context, AppRoutes.xxx, arguments: ...)`.
+4. Model đọc số bằng `asInt` / `asDouble` trong `models/json_utils.dart` vì PostgreSQL trả cột numeric dạng chuỗi.
+5. Tiền hiển thị bằng `formatVnd`, thời gian bằng `formatDateTime` (UTC+7). Thông báo lỗi tiếng Việt, lấy từ `ApiException.message`.
+6. Comment ghi mã yêu cầu SRS (ví dụ `FR-REDEEM-02`) để truy vết.
+
+## Màn hình và yêu cầu
+
+| Màn hình | Route | Yêu cầu SRS |
+|---|---|---|
+| Khung chính (Khám phá, Tìm kiếm, Ví, Tài khoản) | `/` | FR-SEARCH-01..06, FR-ORDER-06 |
+| Đăng nhập email → OTP | `/login`, `/otp` | FR-AUTH-01..03, BR-23 |
+| Chi tiết chiến dịch | `/voucher` | FR-SEARCH-04 |
+| Thanh toán | `/checkout` | FR-ORDER-01..05, BR-01 |
+| Mã QR + OTP sử dụng voucher | `/redeem` | FR-REDEEM-01..04 |
+| Yêu cầu hoàn tiền / danh sách | `/refund`, `/refunds` | FR-REFUND-* |
+| Đánh giá | `/review` | FR-ENGAGE-02..05 |
+| Thông báo, Yêu thích | `/notifications`, `/favorites` | FR-ENGAGE-* |
+
+Các màn trong `protected` sẽ chuyển sang màn đăng nhập nếu người dùng là Khách (Guest).
+
+## API máy chủ đang dùng
+
+`/auth/*`, `/categories`, `/vouchers`, `/vouchers/:id`, `/orders`, `/orders/me`, `/wallet`,
+`/redeem/token`, `/refunds`, `/refunds/me`, `/reviews`, `/favorites`, `/favorites/me`,
+`/notifications/me`, `/notifications/device-token`. Xem Swagger của BE tại `http://localhost:3000/docs`.
+
+## Phân công
+
+Theo `Document/Phan-cong-cong-viec-Voucher.xlsx` (sheet "Tính năng", mã F01–F18). Mỗi người làm trọn tính năng của mình qua cả API, app và web.
+Tạo nhánh `feature/Fxx-ten-ngan` từ `main`, mở PR và cần ít nhất một người review.
