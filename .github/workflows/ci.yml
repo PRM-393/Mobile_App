@@ -1,0 +1,20 @@
+# Moi PR / push len main: phan tich ma (flutter analyze) va chay unit + widget test
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  analyze-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.47.3
+          cache: true
+      - run: flutter pub get
+      - run: flutter analyze
+      - run: flutter test

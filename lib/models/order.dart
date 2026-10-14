@@ -8,10 +8,12 @@ const orderStatusLabels = {
   'FULFILLED': 'Đã phát hành voucher',
   'CANCELLED': 'Đã hủy',
   'REFUNDED_OVERSOLD': 'Đã hoàn tiền (hết hàng)',
+  'PAYMENT_MISMATCH': 'Sai số tiền, chờ hoàn lại',
 };
 
 const voucherStatusLabels = {
   'ACTIVE': 'Đang hiệu lực',
+  'REFUND_PENDING': 'Đang hoàn tiền',
   'USED': 'Đã dùng',
   'EXPIRED': 'Hết hạn',
   'REFUNDED': 'Đã hoàn',
@@ -23,6 +25,7 @@ const refundStatusLabels = {
   'MANUAL_PENDING': 'Chờ quản trị viên hoàn tay',
   'COMPLETED': 'Hoàn tiền thành công',
   'REJECTED': 'Bị từ chối',
+  'FAILED': 'Hoàn tiền thất bại',
 };
 
 class Order {

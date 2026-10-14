@@ -38,10 +38,9 @@ void main() {
         'id': 'c1',
         'brandId': 'b1',
         'title': 'Giam 50k',
-        'voucherType': 'PREPAID_VALUE',
+        'voucherType': 'PREPAID',
         'salePrice': '80000',
         'faceValue': '100000',
-        'discountPercent': '20.00',
         'totalQuantity': 10,
         'soldQuantity': 6,
         'reservedQuantity': 3,
@@ -51,7 +50,7 @@ void main() {
         'status': 'PUBLISHED',
       });
       expect(c.salePrice, 80000);
-      expect(c.discountPercent, 20);
+      expect(c.savingPercent, 20, reason: 'menh gia 100k ban 80k = tiet kiem 20%');
       expect(c.availableQuantity, 1);
     });
   });

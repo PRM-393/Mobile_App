@@ -45,8 +45,8 @@ class Store {
 
 // Loai voucher theo FR-CAMP-02
 const voucherTypeLabels = {
-  'DISCOUNT_CODE': 'Mã giảm giá',
-  'PREPAID_VALUE': 'Voucher mệnh giá',
+  'DISCOUNT': 'Mã giảm giá',
+  'PREPAID': 'Voucher mệnh giá',
   'COMBO': 'Combo',
 };
 
@@ -68,7 +68,10 @@ class VoucherCampaign {
     this.image,
     this.description,
     this.terms,
-    this.discountPercent,
+    this.discountType,
+    this.discountValue,
+    this.maxDiscount,
+    this.comboItems,
     this.limitPerUser,
     this.stores = const [],
   });
@@ -82,7 +85,11 @@ class VoucherCampaign {
   final String voucherType;
   final double salePrice;
   final double faceValue;
-  final double? discountPercent;
+  // FR-CAMP-12: DISCOUNT dung discountType (AMOUNT / PERCENT) + discountValue (+ maxDiscount); COMBO dung comboItems
+  final String? discountType;
+  final double? discountValue;
+  final double? maxDiscount;
+  final String? comboItems;
   final int totalQuantity;
   final int soldQuantity;
   final int reservedQuantity;
@@ -94,6 +101,13 @@ class VoucherCampaign {
   final List<Store> stores;
 
   // Ton kho kha dung = tong - da ban - dang giu cho (FR-CAMP-11)
+  // Phan tram tiet kiem hien tren the voucher: giam theo % thi lay discountValue, con lai so gia ban voi gia tri
+  int? get savingPercent {
+    if (voucherType == 'DISCOUNT' && discountType == 'PERCENT') return discountValue?.round();
+    if (faceValue <= 0 || salePrice >= faceValue) return null;
+    return ((faceValue - salePrice) / faceValue * 100).round();
+  }
+
   int get availableQuantity => (totalQuantity - soldQuantity - reservedQuantity).clamp(0, totalQuantity);
 
   factory VoucherCampaign.fromJson(Map<String, dynamic> json) => VoucherCampaign(
@@ -103,10 +117,13 @@ class VoucherCampaign {
         image: json['image'] as String?,
         description: json['description'] as String?,
         terms: json['terms'] as String?,
-        voucherType: json['voucherType'] as String? ?? 'DISCOUNT_CODE',
+        voucherType: json['voucherType'] as String? ?? 'DISCOUNT',
         salePrice: asDouble(json['salePrice']),
         faceValue: asDouble(json['faceValue']),
-        discountPercent: asDoubleOrNull(json['discountPercent']),
+        discountType: json['discountType'] as String?,
+        discountValue: asDoubleOrNull(json['discountValue']),
+        maxDiscount: asDoubleOrNull(json['maxDiscount']),
+        comboItems: json['comboItems'] as String?,
         totalQuantity: asInt(json['totalQuantity']),
         soldQuantity: asInt(json['soldQuantity']),
         reservedQuantity: asInt(json['reservedQuantity']),

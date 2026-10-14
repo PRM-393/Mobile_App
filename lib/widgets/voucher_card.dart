@@ -51,8 +51,8 @@ class VoucherCard extends StatelessWidget {
                       children: [
                         Text(formatVnd(campaign.salePrice),
                             style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w700)),
-                        if (campaign.discountPercent != null && campaign.discountPercent! > 0)
-                          Text('-${campaign.discountPercent!.toStringAsFixed(0)}%',
+                        if (campaign.savingPercent != null && campaign.savingPercent! > 0)
+                          Text('-${campaign.savingPercent}%',
                               style: const TextStyle(color: AppColors.danger, fontSize: 12, fontWeight: FontWeight.w600)),
                       ],
                     ),
