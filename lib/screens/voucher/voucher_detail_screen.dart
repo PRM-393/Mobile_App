@@ -81,7 +81,10 @@ class _Detail extends StatelessWidget {
                   aspectRatio: 16 / 9,
                   child: c.image == null || c.image!.isEmpty
                       ? Container(color: AppColors.border, child: const Icon(Icons.local_offer_outlined, size: 48))
-                      : Image.network(c.image!, fit: BoxFit.cover,
+                      // Module 12: giai ma anh theo be rong man hinh
+                      : Image.network(c.image!,
+                          fit: BoxFit.cover,
+                          cacheWidth: (MediaQuery.sizeOf(context).width * MediaQuery.devicePixelRatioOf(context)).round(),
                           errorBuilder: (_, _, _) => Container(color: AppColors.border)),
                 ),
               ),

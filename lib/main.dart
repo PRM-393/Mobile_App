@@ -10,6 +10,7 @@ import 'routes.dart';
 import 'services/api_client.dart';
 import 'services/auth_service.dart';
 import 'services/notification_service.dart';
+import 'services/preferences_service.dart';
 import 'services/token_storage.dart';
 import 'services/voucher_services.dart';
 import 'theme/app_theme.dart';
@@ -21,7 +22,15 @@ Future<void> main() async {
   final api = ApiClient(baseUrl: Env.apiBaseUrl);
   final auth = AuthProvider(api: api, authService: AuthService(api), storage: TokenStorage());
   final notifications = NotificationService();
+  final preferences = await PreferencesService.create();
   await Future.wait([auth.hydrate(), notifications.init()]);
+
+  // Dang xuat: xoa tu khoa gan day va anh chup vi cua tai khoan cu
+  var wasLoggedIn = auth.isLoggedIn;
+  auth.addListener(() {
+    if (wasLoggedIn && !auth.isLoggedIn) preferences.clearUserData();
+    wasLoggedIn = auth.isLoggedIn;
+  });
 
   final searchService = SearchService(api);
   final orderService = OrderService(api);
@@ -31,6 +40,7 @@ Future<void> main() async {
       providers: [
         Provider.value(value: api),
         Provider.value(value: notifications),
+        Provider.value(value: preferences),
         Provider.value(value: searchService),
         Provider.value(value: orderService),
         Provider(create: (_) => RedeemService(api)),
@@ -38,8 +48,10 @@ Future<void> main() async {
         Provider(create: (_) => EngageService(api)),
         ChangeNotifierProvider.value(value: auth),
         ChangeNotifierProvider(create: (_) => MainTabController()),
-        ChangeNotifierProvider(create: (_) => SearchProvider(searchService)),
-        ChangeNotifierProvider(create: (_) => WalletProvider(orderService)),
+        ChangeNotifierProvider(create: (_) => SearchProvider(searchService, preferences: preferences)),
+        ChangeNotifierProvider(
+          create: (_) => WalletProvider(orderService, preferences: preferences, notifications: notifications),
+        ),
       ],
       child: const VoucherApp(),
     ),

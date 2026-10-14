@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../models/campaign.dart';
 import '../../providers/search_provider.dart';
 import '../../routes.dart';
 import '../../theme/app_theme.dart';
@@ -50,6 +51,31 @@ class _SearchScreenState extends State<SearchScreen> {
               onSubmitted: search.setKeyword,
             ),
           ),
+          // Tu khoa gan day doc tu SharedPreferences (Module 9)
+          if (search.recentKeywords.isNotEmpty)
+            SizedBox(
+              height: 44,
+              child: ListView(
+                key: const Key('recent-keywords'),
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                children: [
+                  for (final k in search.recentKeywords)
+                    Padding(
+                      padding: const EdgeInsets.only(right: AppSpacing.sm),
+                      child: ActionChip(
+                        avatar: const Icon(Icons.history, size: 16),
+                        label: Text(k),
+                        onPressed: () {
+                          _controller.text = k;
+                          search.setKeyword(k);
+                        },
+                      ),
+                    ),
+                  TextButton(onPressed: search.clearRecentKeywords, child: const Text('Xóa lịch sử')),
+                ],
+              ),
+            ),
           SizedBox(
             height: 52,
             child: ListView(
@@ -69,7 +95,13 @@ class _SearchScreenState extends State<SearchScreen> {
                 style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
               ),
             ),
-          Expanded(child: _results(search)),
+          // Module 12: luoi ket qua chi rebuild khi ket qua / trang thai tai thay doi
+          Expanded(
+            child: Selector<SearchProvider, (bool, String?, List<VoucherCampaign>, int?, bool)>(
+              selector: (_, s) => (s.loading, s.error, s.results, s.radiusKm, s.hasLocation),
+              builder: (context, state, _) => _results(context.read<SearchProvider>(), state),
+            ),
+          ),
         ],
       ),
     );
@@ -80,10 +112,11 @@ class _SearchScreenState extends State<SearchScreen> {
         child: ChoiceChip(label: Text(label), selected: search.radiusKm == km, onSelected: (_) => search.setRadius(km)),
       );
 
-  Widget _results(SearchProvider search) {
-    if (search.loading && search.results.isEmpty) return const LoadingState();
-    if (search.error != null) return ErrorState(search.error!, onRetry: search.search);
-    if (search.results.isEmpty) return const EmptyState('Không tìm thấy voucher phù hợp');
+  Widget _results(SearchProvider search, (bool, String?, List<VoucherCampaign>, int?, bool) state) {
+    final (loading, error, results, radiusKm, hasLocation) = state;
+    if (loading && results.isEmpty) return const LoadingState();
+    if (error != null) return ErrorState(error, onRetry: search.search);
+    if (results.isEmpty) return const EmptyState('Không tìm thấy voucher phù hợp');
     return RefreshIndicator(
       onRefresh: search.search,
       // LayoutBuilder: so cot thay doi theo be rong man hinh (dien thoai nho / lon / tablet)
@@ -96,12 +129,13 @@ class _SearchScreenState extends State<SearchScreen> {
             crossAxisSpacing: AppSpacing.md,
             childAspectRatio: 0.68,
           ),
-          itemCount: search.results.length,
+          itemCount: results.length,
           itemBuilder: (context, i) {
-            final c = search.results[i];
+            final c = results[i];
             return VoucherCard(
+              key: ValueKey(c.id),
               campaign: c,
-              distanceLabel: search.radiusKm != null && search.hasLocation ? 'Trong bán kính ${search.radiusKm} km' : null,
+              distanceLabel: radiusKm != null && hasLocation ? 'Trong bán kính $radiusKm km' : null,
               onTap: () => AppRoutes.push(context, AppRoutes.voucherDetail, arguments: c.id),
             );
           },

@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../models/campaign.dart';
 import '../../providers/main_tab_controller.dart';
+import '../../services/notification_service.dart';
 import '../../services/voucher_services.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/format.dart';
@@ -37,7 +38,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       _error = null;
     });
     try {
+      final notifications = context.read<NotificationService>();
       final result = await context.read<OrderService>().create(widget.campaign.id, _quantity);
+      // LO7: thong bao cuc bo sau thao tac quan trong (tao don, nhac thanh toan trong 15 phut)
+      await notifications.orderCreated();
       final uri = Uri.tryParse(result.paymentUrl);
       if (uri != null && uri.hasScheme) {
         await launchUrl(uri, mode: LaunchMode.externalApplication);

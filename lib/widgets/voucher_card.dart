@@ -32,7 +32,10 @@ class VoucherCard extends StatelessWidget {
                         color: AppColors.border,
                         child: const Icon(Icons.local_offer_outlined, color: AppColors.textSecondary, size: 36),
                       )
-                    : Image.network(campaign.image!, fit: BoxFit.cover,
+                    // Module 12: giai ma anh vua kich thuoc the (~240 dp) thay vi do phan giai goc
+                    : Image.network(campaign.image!,
+                        fit: BoxFit.cover,
+                        cacheWidth: (MediaQuery.devicePixelRatioOf(context) * 240).round(),
                         errorBuilder: (_, _, _) => Container(color: AppColors.border)),
               ),
               Padding(

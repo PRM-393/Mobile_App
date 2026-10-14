@@ -23,58 +23,65 @@ class _WalletScreenState extends State<WalletScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) => context.read<WalletProvider>().load());
   }
 
+  // Module 12: khong watch ca provider; Selector chi rebuild thanh tab khi doi tab,
+  // va chi rebuild danh sach khi (dang tai, loi, danh sach) thay doi
   @override
-  Widget build(BuildContext context) {
-    final wallet = context.watch<WalletProvider>();
-    return Scaffold(
-      appBar: AppBar(title: const Text('Ví voucher')),
-      body: Column(
-        children: [
-          SizedBox(
-            height: 52,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
-              children: [
-                for (final t in WalletProvider.tabs)
-                  Padding(
-                    padding: const EdgeInsets.only(right: AppSpacing.sm),
-                    child: ChoiceChip(
-                      label: Text(voucherStatusLabels[t]!),
-                      selected: wallet.tab == t,
-                      onSelected: (_) => wallet.selectTab(t),
-                    ),
-                  ),
-              ],
+  Widget build(BuildContext context) => Scaffold(
+        appBar: AppBar(title: const Text('Ví voucher')),
+        body: Column(
+          children: [
+            SizedBox(
+              height: 52,
+              child: Selector<WalletProvider, String>(
+                selector: (_, w) => w.tab,
+                builder: (context, tab, _) => ListView(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
+                  children: [
+                    for (final t in WalletProvider.tabs)
+                      Padding(
+                        padding: const EdgeInsets.only(right: AppSpacing.sm),
+                        child: ChoiceChip(
+                          label: Text(voucherStatusLabels[t]!),
+                          selected: tab == t,
+                          onSelected: (_) => context.read<WalletProvider>().selectTab(t),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
             ),
-          ),
-          Expanded(
-            child: RefreshIndicator(
-              onRefresh: wallet.load,
-              child: Builder(builder: (context) {
-                if (wallet.loading && wallet.visibleItems.isEmpty) return const LoadingState();
-                if (wallet.error != null) return ErrorState(wallet.error!, onRetry: wallet.load);
-                final items = wallet.visibleItems;
-                if (items.isEmpty) {
-                  return ListView(children: const [EmptyState('Không có voucher nào trong mục này.')]);
-                }
-                return ListView.separated(
-                  padding: const EdgeInsets.all(AppSpacing.md),
-                  itemCount: items.length,
-                  separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.md),
-                  itemBuilder: (context, i) => _VoucherTile(item: items[i]),
-                );
-              }),
+            Expanded(
+              child: RefreshIndicator(
+                onRefresh: () => context.read<WalletProvider>().load(),
+                child: Selector<WalletProvider, (bool, String?, List<VoucherItem>)>(
+                  selector: (_, w) => (w.loading, w.error, w.visibleItems),
+                  builder: (context, state, _) {
+                    final (loading, error, items) = state;
+                    final wallet = context.read<WalletProvider>();
+                    if (loading && items.isEmpty) return const LoadingState();
+                    if (error != null) return ErrorState(error, onRetry: wallet.load);
+                    if (items.isEmpty) {
+                      return ListView(children: const [EmptyState('Không có voucher nào trong mục này.')]);
+                    }
+                    // ListView.separated dung builder: chi dung widget cho cac dong dang hien tren man hinh
+                    return ListView.separated(
+                      padding: const EdgeInsets.all(AppSpacing.md),
+                      itemCount: items.length,
+                      separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.md),
+                      itemBuilder: (context, i) => _VoucherTile(key: ValueKey(items[i].id), item: items[i]),
+                    );
+                  },
+                ),
+              ),
             ),
-          ),
-        ],
-      ),
-    );
-  }
+          ],
+        ),
+      );
 }
 
 class _VoucherTile extends StatelessWidget {
-  const _VoucherTile({required this.item});
+  const _VoucherTile({super.key, required this.item});
 
   final VoucherItem item;
 

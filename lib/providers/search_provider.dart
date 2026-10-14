@@ -2,13 +2,16 @@ import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 
 import '../models/campaign.dart';
+import '../services/preferences_service.dart';
 import '../services/voucher_services.dart';
 
-// Tim kiem theo tu khoa + "gan toi" voi xin quyen vi tri (FR-SEARCH-02/03/05/06)
+// Tim kiem theo tu khoa + "gan toi" voi xin quyen vi tri (FR-SEARCH-02/03/05/06).
+// Tu khoa gan day luu bang SharedPreferences (Module 9) de goi y lai o lan mo app sau.
 class SearchProvider extends ChangeNotifier {
-  SearchProvider(this._searchService);
+  SearchProvider(this._searchService, {this._preferences});
 
   final SearchService _searchService;
+  final PreferencesService? _preferences;
 
   String _keyword = '';
   int? _radiusKm;
@@ -25,9 +28,16 @@ class SearchProvider extends ChangeNotifier {
   bool get loading => _loading;
   String? get error => _error;
   List<VoucherCampaign> get results => _results;
+  List<String> get recentKeywords => _preferences?.recentKeywords ?? const [];
+
+  Future<void> clearRecentKeywords() async {
+    await _preferences?.clearRecentKeywords();
+    notifyListeners();
+  }
 
   Future<void> setKeyword(String value) async {
     _keyword = value.trim();
+    await _preferences?.addRecentKeyword(_keyword);
     await search();
   }
 

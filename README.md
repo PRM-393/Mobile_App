@@ -10,9 +10,10 @@ Viết bằng **Flutter (Dart)** theo học liệu môn học. Tài liệu đặ
 | Điều hướng | Named routes + `onGenerateRoute` (Navigator 1.0), chặn màn cần đăng nhập |
 | Gọi API | `http` qua một `ApiClient` dùng chung, tự làm mới token khi 401 |
 | Lưu phiên | `flutter_secure_storage` (Keystore / Keychain) |
+| Dữ liệu nhỏ trên máy | `shared_preferences` (từ khóa tìm kiếm gần đây, ảnh chụp trạng thái ví) – Module 9 |
 | Vị trí | `geolocator` (tìm voucher gần đây, FR-SEARCH) |
 | QR | `qr_flutter` (hiện mã QR động 60 giây) |
-| Thông báo | `flutter_local_notifications` |
+| Thông báo | `flutter_local_notifications`: bắn sau tạo đơn, voucher về ví, đã dùng, hoàn tiền (LO7) |
 | Định dạng | `intl` (tiền VND, giờ UTC+7) |
 
 ## Chạy dự án
@@ -63,7 +64,8 @@ Quy ước bắt buộc:
 3. Thêm màn mới: tạo trong `screens/<nhóm>/`, khai báo tên ở `AppRoutes`, thêm vào `protected` nếu cần đăng nhập. Mở màn bằng `AppRoutes.push(context, AppRoutes.xxx, arguments: ...)`.
 4. Model đọc số bằng `asInt` / `asDouble` trong `models/json_utils.dart` vì PostgreSQL trả cột numeric dạng chuỗi.
 5. Tiền hiển thị bằng `formatVnd`, thời gian bằng `formatDateTime` (UTC+7). Thông báo lỗi tiếng Việt, lấy từ `ApiException.message`.
-6. Comment ghi mã yêu cầu SRS (ví dụ `FR-REDEEM-02`) để truy vết.
+6. Hiệu năng (Module 12): danh sách dùng `ListView.builder` / `GridView.builder`; màn đọc provider bằng `Selector` thay vì `context.watch` cả provider; mỗi dòng có `ValueKey(id)`; ảnh mạng đặt `cacheWidth`. Mẫu: `screens/wallet/wallet_screen.dart`.
+7. Comment ghi mã yêu cầu SRS (ví dụ `FR-REDEEM-02`) để truy vết.
 
 ## Màn hình và yêu cầu
 
