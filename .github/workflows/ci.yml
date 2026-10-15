@@ -1,9 +1,13 @@
-# Moi PR / push len main: phan tich ma (flutter analyze) va chay unit + widget test
+# Moi PR / push len main: phan tich ma (flutter analyze) va chay unit + widget test.
+# Push len main hoac bam "Run workflow": build Release APK, tai ve o muc Artifacts cua lan chay.
+# Day tag v* (vd. v1.0.0): tao GitHub Release kem file APK de nop / cai len may that.
 name: CI
 on:
   push:
     branches: [main]
+    tags: ['v*']
   pull_request:
+  workflow_dispatch:
 
 jobs:
   analyze-test:
@@ -18,3 +22,33 @@ jobs:
       - run: flutter pub get
       - run: flutter analyze
       - run: flutter test
+
+  build-apk:
+    needs: analyze-test
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.47.3
+          cache: true
+      - run: flutter pub get
+      # API mac dinh tro toi BE tren Render (lib/config/env.dart)
+      - run: flutter build apk --release
+      - run: mv build/app/outputs/flutter-apk/app-release.apk voucher-platform-${{ github.ref_name }}.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: voucher-platform-apk
+          path: voucher-platform-*.apk
+      - if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: voucher-platform-*.apk

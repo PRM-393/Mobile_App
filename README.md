@@ -18,16 +18,19 @@ Viết bằng **Flutter (Dart)** theo học liệu môn học. Tài liệu đặ
 
 ## Chạy dự án
 
-Yêu cầu: Flutter SDK 3.x, Android Studio (emulator) hoặc thiết bị thật, máy chủ `Web_BE` đang chạy.
+Yêu cầu: Flutter SDK 3.47.x, Android Studio (emulator) hoặc điện thoại Android. **Không cần chạy BE hay cài CSDL**:
+app mặc định gọi BE đã deploy trên Render (`lib/config/env.dart`).
 
 ```bash
 flutter pub get
-flutter run --dart-define=API_BASE_URL=http://10.0.2.2:3000/api
+flutter run
 ```
 
-- `10.0.2.2` là địa chỉ máy host khi chạy trên Android emulator (mặc định nếu không truyền).
-- Thiết bị thật: dùng IP LAN của máy chạy BE, ví dụ `http://192.168.1.10:3000/api`.
-- Không hard-code địa chỉ máy chủ trong mã nguồn (NFR-MNT-02).
+- Lần gọi đầu có thể mất 30–60 giây vì Render gói free đang "ngủ".
+- Khách hàng đăng nhập bằng email + OTP. Tài khoản mẫu: `khach@voucher.local` (đã có 1 voucher còn hiệu lực).
+- Chạy với BE trên máy mình: `flutter run --dart-define=API_BASE_URL=http://10.0.2.2:3000/api` (10.0.2.2 là máy host khi dùng
+  emulator; điện thoại thật dùng IP LAN, ví dụ `http://192.168.1.10:3000/api`).
+- Không hard-code địa chỉ máy chủ trong mã nguồn (NFR-MNT-02); đổi BE production thì sửa `Env.defaultBackend`.
 
 Kiểm tra trước khi tạo PR:
 
@@ -36,7 +39,14 @@ flutter analyze
 flutter test
 ```
 
-Bản phát hành: `flutter build apk --release --dart-define=API_BASE_URL=<địa chỉ máy chủ>`.
+## Xuất APK (Release)
+
+- **Tự động trên GitHub Actions:** mỗi lần push lên `main`, workflow `CI` chạy test rồi build Release APK. Tải ở tab
+  **Actions** → lần chạy mới nhất → mục **Artifacts** → `voucher-platform-apk`. Có thể bấm **Run workflow** để build lại.
+- **Bản nộp / demo:** tạo tag dạng `v1.0.0` rồi push (`git tag v1.0.0 && git push origin v1.0.0`). Workflow tạo
+  **GitHub Release** kèm file APK để tải về cài trên máy thật.
+- **Build trên máy:** `flutter build apk --release`, file ra ở `build/app/outputs/flutter-apk/app-release.apk`.
+- APK đang ký bằng khóa debug của Flutter, đủ để cài thử và nộp đồ án. Muốn đưa lên Google Play thì phải tạo keystore riêng.
 
 ## Cấu trúc thư mục
 
