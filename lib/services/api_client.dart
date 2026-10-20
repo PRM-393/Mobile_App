@@ -70,6 +70,14 @@ class ApiClient {
       throw ApiException(_messageOf(decoded) ?? 'Đã có lỗi xảy ra, vui lòng thử lại.',
           statusCode: response.statusCode);
     }
+    return unwrap(decoded);
+  }
+
+  // F01: may chu tra { data, error, meta } -> tra ve data cho service; phan hoi khong boc (dinh dang cu) giu nguyen
+  static Object? unwrap(Object? decoded) {
+    if (decoded is Map && decoded.containsKey('data') && decoded.containsKey('error') && decoded.containsKey('meta')) {
+      return decoded['data'];
+    }
     return decoded;
   }
 
@@ -81,8 +89,9 @@ class ApiClient {
     }
   }
 
-  // AllExceptionsFilter cua BE tra { message } voi message la chuoi, hoac object/mang tu ValidationPipe
+  // Loi tu BE: { error: { message } } (F01) hoac { message } (dinh dang cu, message co the la object / mang)
   static String? _messageOf(Object? decoded) {
+    if (decoded is Map && decoded['error'] is Map) return (decoded['error'] as Map)['message']?.toString();
     Object? message = decoded is Map ? decoded['message'] : null;
     if (message is Map) message = message['message'];
     if (message is List) return message.join('\n');
