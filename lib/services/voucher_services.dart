@@ -102,8 +102,19 @@ class EngageService {
   Future<void> createReview(String voucherItemId, int rating, {String? comment}) =>
       _api.post('/reviews', body: {'voucherItemId': voucherItemId, 'rating': rating, 'comment': comment});
 
-  Future<List<AppNotification>> myNotifications() async =>
-      asList(await _api.get('/notifications/me'), AppNotification.fromJson);
+  // F16: thong bao theo trang (20 / trang), kem so chua doc
+  Future<NotificationPage> myNotifications({int page = 1}) async =>
+      NotificationPage.fromJson(await _api.get('/notifications/me', query: {'page': page}));
+
+  Future<void> markNotificationRead(String id) => _api.patch('/notifications/$id/read');
+
+  Future<void> markAllNotificationsRead() => _api.patch('/notifications/read-all');
+
+  Future<List<NotificationSetting>> notificationSettings() async =>
+      asList(await _api.get('/notifications/settings'), NotificationSetting.fromJson);
+
+  Future<List<NotificationSetting>> updateNotificationSetting(String type, bool enabled) async => asList(
+      await _api.put('/notifications/settings', body: {'type': type, 'enabled': enabled}), NotificationSetting.fromJson);
 
   Future<void> registerDeviceToken(String token, String platform) =>
       _api.post('/notifications/device-token', body: {'token': token, 'platform': platform});
