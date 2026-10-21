@@ -27,7 +27,9 @@ class NotificationService {
         ),
       );
       await _plugin
-          .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >()
           ?.requestNotificationsPermission();
       _ready = true;
     } catch (e) {
@@ -36,15 +38,22 @@ class NotificationService {
   }
 
   // ---- Thong bao theo nghiep vu ----
-  Future<void> orderCreated() =>
-      show('Đã tạo đơn hàng', 'Hoàn tất thanh toán trong 15 phút để giữ voucher của bạn.');
+  Future<void> orderCreated() => show(
+    'Đã tạo đơn hàng',
+    'Hoàn tất thanh toán trong 15 phút để giữ voucher của bạn.',
+  );
 
-  Future<void> vouchersIssued(int count) =>
-      show('Voucher đã về ví', count == 1 ? 'Bạn có 1 voucher mới trong ví.' : 'Bạn có $count voucher mới trong ví.');
+  Future<void> vouchersIssued(int count) => show(
+    'Voucher đã về ví',
+    count == 1
+        ? 'Bạn có 1 voucher mới trong ví.'
+        : 'Bạn có $count voucher mới trong ví.',
+  );
 
   Future<void> voucherUsed(String title) => show('Đã sử dụng voucher', title);
 
-  Future<void> voucherRefunded(String title) => show('Hoàn tiền thành công', title);
+  Future<void> voucherRefunded(String title) =>
+      show('Hoàn tiền thành công', title);
 
   Future<void> show(String title, String body) async {
     if (!_ready) return;
@@ -52,7 +61,10 @@ class NotificationService {
       id: DateTime.now().millisecondsSinceEpoch ~/ 1000 % 100000,
       title: title,
       body: body,
-      notificationDetails: const NotificationDetails(android: _channel, iOS: DarwinNotificationDetails()),
+      notificationDetails: const NotificationDetails(
+        android: _channel,
+        iOS: DarwinNotificationDetails(),
+      ),
     );
   }
 }

@@ -35,9 +35,15 @@ class _ReviewScreenState extends State<ReviewScreen> {
     });
     try {
       final comment = _commentController.text.trim();
-      await context.read<EngageService>().createReview(widget.voucher.id, _rating, comment: comment.isEmpty ? null : comment);
+      await context.read<EngageService>().createReview(
+        widget.voucher.id,
+        _rating,
+        comment: comment.isEmpty ? null : comment,
+      );
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Cảm ơn bạn đã đánh giá!')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Cảm ơn bạn đã đánh giá!')));
       Navigator.pop(context);
     } catch (e) {
       setState(() => _error = e.toString());
@@ -48,33 +54,46 @@ class _ReviewScreenState extends State<ReviewScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(title: const Text('Đánh giá')),
-        body: ListView(
-          padding: const EdgeInsets.all(AppSpacing.md),
+    appBar: AppBar(title: const Text('Đánh giá')),
+    body: ListView(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      children: [
+        Text(
+          widget.voucher.campaign?.title ?? 'Voucher',
+          style: const TextStyle(fontWeight: FontWeight.w700),
+        ),
+        const SizedBox(height: AppSpacing.md),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(widget.voucher.campaign?.title ?? 'Voucher', style: const TextStyle(fontWeight: FontWeight.w700)),
-            const SizedBox(height: AppSpacing.md),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                for (var n = 1; n <= 5; n++)
-                  IconButton(
-                    iconSize: 40,
-                    onPressed: () => setState(() => _rating = n),
-                    icon: Icon(n <= _rating ? Icons.star : Icons.star_border, color: AppColors.secondary),
-                  ),
-              ],
-            ),
-            TextField(
-              controller: _commentController,
-              maxLines: 4,
-              maxLength: 1000,
-              decoration: const InputDecoration(hintText: 'Chia sẻ trải nghiệm của bạn...'),
-            ),
-            if (_error != null) Text(_error!, style: const TextStyle(color: AppColors.danger)),
-            const SizedBox(height: AppSpacing.md),
-            PrimaryButton(label: 'Gửi đánh giá', loading: _loading, onPressed: _submit),
+            for (var n = 1; n <= 5; n++)
+              IconButton(
+                iconSize: 40,
+                onPressed: () => setState(() => _rating = n),
+                icon: Icon(
+                  n <= _rating ? Icons.star : Icons.star_border,
+                  color: AppColors.secondary,
+                ),
+              ),
           ],
         ),
-      );
+        TextField(
+          controller: _commentController,
+          maxLines: 4,
+          maxLength: 1000,
+          decoration: const InputDecoration(
+            hintText: 'Chia sẻ trải nghiệm của bạn...',
+          ),
+        ),
+        if (_error != null)
+          Text(_error!, style: const TextStyle(color: AppColors.danger)),
+        const SizedBox(height: AppSpacing.md),
+        PrimaryButton(
+          label: 'Gửi đánh giá',
+          loading: _loading,
+          onPressed: _submit,
+        ),
+      ],
+    ),
+  );
 }

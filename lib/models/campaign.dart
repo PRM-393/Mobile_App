@@ -9,8 +9,11 @@ class Category {
   final String name;
   final String? icon;
 
-  factory Category.fromJson(Map<String, dynamic> json) =>
-      Category(id: json['id'] as String, name: json['name'] as String, icon: json['icon'] as String?);
+  factory Category.fromJson(Map<String, dynamic> json) => Category(
+    id: json['id'] as String,
+    name: json['name'] as String,
+    icon: json['icon'] as String?,
+  );
 }
 
 class Store {
@@ -33,14 +36,14 @@ class Store {
   final double? distanceKm;
 
   factory Store.fromJson(Map<String, dynamic> json) => Store(
-        id: json['id'] as String,
-        brandId: json['brandId'] as String? ?? '',
-        name: json['name'] as String? ?? '',
-        address: json['address'] as String? ?? '',
-        latitude: asDouble(json['latitude']),
-        longitude: asDouble(json['longitude']),
-        distanceKm: asDoubleOrNull(json['distanceKm']),
-      );
+    id: json['id'] as String,
+    brandId: json['brandId'] as String? ?? '',
+    name: json['name'] as String? ?? '',
+    address: json['address'] as String? ?? '',
+    latitude: asDouble(json['latitude']),
+    longitude: asDouble(json['longitude']),
+    distanceKm: asDoubleOrNull(json['distanceKm']),
+  );
 }
 
 // Loai voucher theo FR-CAMP-02
@@ -74,6 +77,11 @@ class VoucherCampaign {
     this.comboItems,
     this.limitPerUser,
     this.stores = const [],
+    this.distanceKm,
+    this.refundDescription,
+    this.averageRating = 0,
+    this.reviewCount = 0,
+    this.reviews = const [],
   });
 
   final String id;
@@ -99,18 +107,27 @@ class VoucherCampaign {
   final DateTime voucherExpireAt;
   final String status;
   final List<Store> stores;
+  final double? distanceKm;
+  final String? refundDescription;
+  final double averageRating;
+  final int reviewCount;
+  final List<Map<String, dynamic>> reviews;
 
   // Ton kho kha dung = tong - da ban - dang giu cho (FR-CAMP-11)
   // Phan tram tiet kiem hien tren the voucher: giam theo % thi lay discountValue, con lai so gia ban voi gia tri
   int? get savingPercent {
-    if (voucherType == 'DISCOUNT' && discountType == 'PERCENT') return discountValue?.round();
+    if (voucherType == 'DISCOUNT' && discountType == 'PERCENT') {
+      return discountValue?.round();
+    }
     if (faceValue <= 0 || salePrice >= faceValue) return null;
     return ((faceValue - salePrice) / faceValue * 100).round();
   }
 
-  int get availableQuantity => (totalQuantity - soldQuantity - reservedQuantity).clamp(0, totalQuantity);
+  int get availableQuantity =>
+      (totalQuantity - soldQuantity - reservedQuantity).clamp(0, totalQuantity);
 
-  factory VoucherCampaign.fromJson(Map<String, dynamic> json) => VoucherCampaign(
+  factory VoucherCampaign.fromJson(Map<String, dynamic> json) =>
+      VoucherCampaign(
         id: json['id'] as String,
         brandId: json['brandId'] as String? ?? '',
         title: json['title'] as String? ?? '',
@@ -127,12 +144,22 @@ class VoucherCampaign {
         totalQuantity: asInt(json['totalQuantity']),
         soldQuantity: asInt(json['soldQuantity']),
         reservedQuantity: asInt(json['reservedQuantity']),
-        limitPerUser: json['limitPerUser'] == null ? null : asInt(json['limitPerUser']),
+        limitPerUser: json['limitPerUser'] == null
+            ? null
+            : asInt(json['limitPerUser']),
         saleStartAt: asDate(json['saleStartAt']),
         saleEndAt: asDate(json['saleEndAt']),
         voucherExpireAt: asDate(json['voucherExpireAt']),
         status: json['status'] as String? ?? 'PUBLISHED',
         stores: asList(json['stores'], Store.fromJson),
+        distanceKm: asDoubleOrNull(json['distanceKm']),
+        refundDescription:
+            (json['refundPolicy'] as Map?)?['description'] as String?,
+        averageRating: asDouble(json['averageRating']),
+        reviewCount: asInt(json['reviewCount']),
+        reviews: (json['reviews'] as List? ?? [])
+            .map((e) => Map<String, dynamic>.from(e as Map))
+            .toList(),
       );
 }
 
@@ -143,6 +170,8 @@ class SearchResult {
   final List<VoucherCampaign> items;
   final int total;
 
-  factory SearchResult.fromJson(Map<String, dynamic> json) =>
-      SearchResult(items: asList(json['items'], VoucherCampaign.fromJson), total: asInt(json['total']));
+  factory SearchResult.fromJson(Map<String, dynamic> json) => SearchResult(
+    items: asList(json['items'], VoucherCampaign.fromJson),
+    total: asInt(json['total']),
+  );
 }

@@ -83,7 +83,8 @@ class CreateOrderResult {
   final Order order;
   final String? paymentUrl;
 
-  factory CreateOrderResult.fromJson(Map<String, dynamic> json) => CreateOrderResult(
+  factory CreateOrderResult.fromJson(Map<String, dynamic> json) =>
+      CreateOrderResult(
         order: Order.fromJson(json['order'] as Map<String, dynamic>),
         paymentUrl: (json['paymentUrl'] as String?)?.isEmpty ?? true ? null : json['paymentUrl'] as String,
       );
@@ -115,26 +116,33 @@ class VoucherItem {
 
   // Het han xet theo expireAt so voi hien tai, khong cho tac vu nen cap nhat trang thai
   String get effectiveStatus =>
-      status == 'ACTIVE' && expireAt.isBefore(DateTime.now()) ? 'EXPIRED' : status;
+      status == 'ACTIVE' && expireAt.isBefore(DateTime.now())
+      ? 'EXPIRED'
+      : status;
 
   factory VoucherItem.fromJson(Map<String, dynamic> json) => VoucherItem(
-        id: json['id'] as String,
-        orderId: json['orderId'] as String? ?? '',
-        campaignId: json['campaignId'] as String? ?? '',
-        code: json['code'] as String? ?? '',
-        status: json['status'] as String? ?? 'ACTIVE',
-        issuedAt: asDate(json['issuedAt']),
-        usedAt: asDateOrNull(json['usedAt']),
-        expireAt: asDate(json['expireAt']),
-        campaign: json['campaign'] is Map<String, dynamic>
-            ? VoucherCampaign.fromJson(json['campaign'] as Map<String, dynamic>)
-            : null,
-      );
+    id: json['id'] as String,
+    orderId: json['orderId'] as String? ?? '',
+    campaignId: json['campaignId'] as String? ?? '',
+    code: json['code'] as String? ?? '',
+    status: json['status'] as String? ?? 'ACTIVE',
+    issuedAt: asDate(json['issuedAt']),
+    usedAt: asDateOrNull(json['usedAt']),
+    expireAt: asDate(json['expireAt']),
+    campaign: json['campaign'] is Map<String, dynamic>
+        ? VoucherCampaign.fromJson(json['campaign'] as Map<String, dynamic>)
+        : null,
+  );
 }
 
 // Token redeem: QR dong + OTP 6 so, het han sau 60 giay (FR-REDEEM-02/03)
 class RedeemToken {
-  const RedeemToken({required this.qrPayload, required this.otpCode, required this.expiresAt, required this.ttlSeconds});
+  const RedeemToken({
+    required this.qrPayload,
+    required this.otpCode,
+    required this.expiresAt,
+    required this.ttlSeconds,
+  });
 
   final String qrPayload;
   final String otpCode;
@@ -142,11 +150,11 @@ class RedeemToken {
   final int ttlSeconds;
 
   factory RedeemToken.fromJson(Map<String, dynamic> json) => RedeemToken(
-        qrPayload: json['qrPayload'] as String,
-        otpCode: json['otpCode'] as String,
-        expiresAt: asDate(json['expiresAt']),
-        ttlSeconds: asInt(json['ttlSeconds'], 60),
-      );
+    qrPayload: json['qrPayload'] as String,
+    otpCode: json['otpCode'] as String,
+    expiresAt: asDate(json['expiresAt']),
+    ttlSeconds: asInt(json['ttlSeconds'], 60),
+  );
 }
 
 class RefundRequest {
@@ -167,11 +175,11 @@ class RefundRequest {
   final DateTime createdAt;
 
   factory RefundRequest.fromJson(Map<String, dynamic> json) => RefundRequest(
-        id: json['id'] as String,
-        voucherItemId: json['voucherItemId'] as String? ?? '',
-        status: json['status'] as String? ?? 'REQUESTED',
-        reason: json['reason'] as String?,
-        rejectReason: json['rejectReason'] as String?,
-        createdAt: asDate(json['createdAt']),
-      );
+    id: json['id'] as String,
+    voucherItemId: json['voucherItemId'] as String? ?? '',
+    status: json['status'] as String? ?? 'REQUESTED',
+    reason: json['reason'] as String?,
+    rejectReason: json['rejectReason'] as String?,
+    createdAt: asDate(json['createdAt']),
+  );
 }

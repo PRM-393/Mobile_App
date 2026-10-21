@@ -8,16 +8,22 @@ double asDouble(Object? value, [double fallback = 0]) {
 int asInt(Object? value, [int fallback = 0]) {
   if (value is int) return value;
   if (value is num) return value.toInt();
-  if (value is String) return int.tryParse(value) ?? double.tryParse(value)?.toInt() ?? fallback;
+  if (value is String) {
+    return int.tryParse(value) ?? double.tryParse(value)?.toInt() ?? fallback;
+  }
   return fallback;
 }
 
 double? asDoubleOrNull(Object? value) => value == null ? null : asDouble(value);
 
-DateTime asDate(Object? value) =>
-    value is String ? DateTime.tryParse(value) ?? DateTime.fromMillisecondsSinceEpoch(0) : DateTime.fromMillisecondsSinceEpoch(0);
+DateTime asDate(Object? value) => value is String
+    ? DateTime.tryParse(value) ?? DateTime.fromMillisecondsSinceEpoch(0)
+    : DateTime.fromMillisecondsSinceEpoch(0);
 
-DateTime? asDateOrNull(Object? value) => value is String ? DateTime.tryParse(value) : null;
+DateTime? asDateOrNull(Object? value) =>
+    value is String ? DateTime.tryParse(value) : null;
 
 List<T> asList<T>(Object? value, T Function(Map<String, dynamic>) fromJson) =>
-    value is List ? value.whereType<Map<String, dynamic>>().map(fromJson).toList() : <T>[];
+    value is List
+    ? value.whereType<Map<String, dynamic>>().map(fromJson).toList()
+    : <T>[];

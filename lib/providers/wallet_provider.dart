@@ -32,7 +32,9 @@ class WalletProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  void _refilter() => _visible = _items.where((i) => i.effectiveStatus == _tab).toList(growable: false);
+  void _refilter() => _visible = _items
+      .where((i) => i.effectiveStatus == _tab)
+      .toList(growable: false);
 
   Future<void> load() async {
     _loading = true;

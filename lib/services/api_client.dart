@@ -16,7 +16,8 @@ class ApiException implements Exception {
 // HTTP client dung chung: gan "Authorization: Bearer <token>" (SRS 8.3) va tu lam moi access token
 // khi het han (401) roi thu lai request mot lan (FR-AUTH-03).
 class ApiClient {
-  ApiClient({required this.baseUrl, http.Client? httpClient}) : _http = httpClient ?? http.Client();
+  ApiClient({required this.baseUrl, http.Client? httpClient})
+    : _http = httpClient ?? http.Client();
 
   final String baseUrl;
   final http.Client _http;
@@ -25,12 +26,17 @@ class ApiClient {
   String? Function()? accessTokenGetter;
   Future<bool> Function()? onUnauthorized;
 
-  Future<dynamic> get(String path, {Map<String, Object?>? query}) => _send('GET', path, query: query);
+  Future<dynamic> get(String path, {Map<String, Object?>? query}) =>
+      _send('GET', path, query: query);
 
-  Future<dynamic> post(String path, {Object? body, bool authenticated = true}) =>
-      _send('POST', path, body: body, authenticated: authenticated);
+  Future<dynamic> post(
+    String path, {
+    Object? body,
+    bool authenticated = true,
+  }) => _send('POST', path, body: body, authenticated: authenticated);
 
-  Future<dynamic> patch(String path, {Object? body}) => _send('PATCH', path, body: body);
+  Future<dynamic> patch(String path, {Object? body}) =>
+      _send('PATCH', path, body: body);
 
   Future<dynamic> put(String path, {Object? body}) => _send('PUT', path, body: body);
 
@@ -44,9 +50,11 @@ class ApiClient {
   }) async {
     final params = <String, String>{
       for (final e in (query ?? const {}).entries)
-        if (e.value != null && e.value.toString().isNotEmpty) e.key: e.value.toString(),
+        if (e.value != null && e.value.toString().isNotEmpty)
+          e.key: e.value.toString(),
     };
-    final uri = Uri.parse('$baseUrl$path').replace(queryParameters: params.isEmpty ? null : params);
+    final uri = Uri.parse('$baseUrl$path')
+        .replace(queryParameters: params.isEmpty ? null : params);
     final token = authenticated ? accessTokenGetter?.call() : null;
     final request = http.Request(method, uri)
       ..headers['Content-Type'] = 'application/json'
@@ -58,19 +66,35 @@ class ApiClient {
     try {
       response = await http.Response.fromStream(await _http.send(request));
     } catch (_) {
-      throw const ApiException('Không kết nối được máy chủ. Vui lòng kiểm tra mạng và thử lại.');
+      throw const ApiException(
+        'Không kết nối được máy chủ. Vui lòng kiểm tra mạng và thử lại.',
+      );
     }
 
-    if (response.statusCode == 401 && authenticated && retry && onUnauthorized != null) {
+    if (response.statusCode == 401 &&
+        authenticated &&
+        retry &&
+        onUnauthorized != null) {
       if (await onUnauthorized!()) {
-        return _send(method, path, query: query, body: body, authenticated: authenticated, retry: false);
+        return _send(
+          method,
+          path,
+          query: query,
+          body: body,
+          authenticated: authenticated,
+          retry: false,
+        );
       }
     }
 
-    final decoded = response.bodyBytes.isEmpty ? null : _tryDecode(utf8.decode(response.bodyBytes, allowMalformed: true));
+    final decoded = response.bodyBytes.isEmpty
+        ? null
+        : _tryDecode(utf8.decode(response.bodyBytes, allowMalformed: true));
     if (response.statusCode >= 400) {
-      throw ApiException(_messageOf(decoded) ?? 'Đã có lỗi xảy ra, vui lòng thử lại.',
-          statusCode: response.statusCode);
+      throw ApiException(
+        _messageOf(decoded) ?? 'Đã có lỗi xảy ra, vui lòng thử lại.',
+        statusCode: response.statusCode,
+      );
     }
     return unwrap(decoded);
   }
