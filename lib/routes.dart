@@ -7,7 +7,9 @@ import 'providers/auth_provider.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/otp_verify_screen.dart';
 import 'screens/checkout/checkout_screen.dart';
+import 'screens/checkout/payment_result_screen.dart';
 import 'screens/engage/favorites_screen.dart';
+import 'screens/engage/notification_settings_screen.dart';
 import 'screens/engage/notifications_screen.dart';
 import 'screens/engage/review_screen.dart';
 import 'screens/main_shell.dart';
@@ -25,15 +27,17 @@ class AppRoutes {
   static const otp = '/otp';
   static const voucherDetail = '/voucher';
   static const checkout = '/checkout';
+  static const paymentResult = '/payment-result';
   static const redeemQr = '/redeem';
   static const refundRequest = '/refund';
   static const refundList = '/refunds';
   static const review = '/review';
   static const notifications = '/notifications';
+  static const notificationSettings = '/notification-settings';
   static const favorites = '/favorites';
 
   // Cac man hinh can dang nhap (protected routes - Module 10, FR-AUTH-11)
-  static const protected = {checkout, redeemQr, refundRequest, refundList, review, notifications, favorites};
+  static const protected = {checkout, paymentResult, redeemQr, refundRequest, refundList, review, notifications, notificationSettings, favorites};
 
   // Mo man hinh; neu can dang nhap ma dang la Guest thi chuyen sang man dang nhap
   static Future<void> push(BuildContext context, String name, {Object? arguments}) {
@@ -51,11 +55,13 @@ class AppRoutes {
       otp => OtpVerifyScreen(email: args as String),
       voucherDetail => VoucherDetailScreen(campaignId: args as String),
       checkout => CheckoutScreen(campaign: args as VoucherCampaign),
+      paymentResult => PaymentResultScreen(args: args as PaymentResultArgs),
       redeemQr => RedeemQrScreen(voucher: args as VoucherItem),
       refundRequest => RefundRequestScreen(voucher: args as VoucherItem),
       refundList => const RefundListScreen(),
       review => ReviewScreen(voucher: args as VoucherItem),
       notifications => const NotificationsScreen(),
+      notificationSettings => const NotificationSettingsScreen(),
       favorites => const FavoritesScreen(),
       _ => const Scaffold(body: Center(child: Text('Không tìm thấy màn hình'))),
     };

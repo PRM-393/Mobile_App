@@ -28,6 +28,7 @@ const refundStatusLabels = {
   'FAILED': 'Hoàn tiền thất bại',
 };
 
+// Don hang (FR-ORDER-01..13). Trang thai chi lay tu may chu, app khong tu ket luan (FR-ORDER-05).
 class Order {
   const Order({
     required this.id,
@@ -36,6 +37,10 @@ class Order {
     required this.totalAmount,
     required this.status,
     required this.createdAt,
+    this.reservedUntil,
+    this.paidAt,
+    this.paymentUrl,
+    this.campaignTitle,
   });
 
   final String id;
@@ -44,6 +49,18 @@ class Order {
   final double totalAmount;
   final String status;
   final DateTime createdAt;
+  final DateTime? reservedUntil;
+  final DateTime? paidAt;
+  final String? paymentUrl;
+  final String? campaignTitle;
+
+  // Trang thai ket thuc: dung hoi may chu
+  static const finalStatuses = {'FULFILLED', 'CANCELLED', 'REFUNDED_OVERSOLD', 'PAYMENT_MISMATCH'};
+
+  bool get isFinal => finalStatuses.contains(status);
+
+  // FR-ORDER-12: duoc thanh toan lai khi don con PENDING va chua het thoi gian giu cho
+  bool canRetry(DateTime now) => status == 'PENDING' && reservedUntil != null && now.isBefore(reservedUntil!);
 
   factory Order.fromJson(Map<String, dynamic> json) => Order(
         id: json['id'] as String,
@@ -52,19 +69,23 @@ class Order {
         totalAmount: asDouble(json['totalAmount']),
         status: json['status'] as String? ?? 'PENDING',
         createdAt: asDate(json['createdAt']),
+        reservedUntil: asDateOrNull(json['reservedUntil']),
+        paidAt: asDateOrNull(json['paidAt']),
+        paymentUrl: json['paymentUrl'] as String?,
+        campaignTitle: json['campaign'] is Map ? (json['campaign'] as Map)['title'] as String? : null,
       );
 }
 
-// Phan hoi POST /orders: don PENDING + duong dan cong thanh toan sandbox (FR-ORDER-04)
+// Phan hoi khi tao don / thanh toan lai. paymentUrl = null khi may chu chua cau hinh payOS (dung thanh toan thu)
 class CreateOrderResult {
-  const CreateOrderResult({required this.order, required this.paymentUrl});
+  const CreateOrderResult({required this.order, this.paymentUrl});
 
   final Order order;
-  final String paymentUrl;
+  final String? paymentUrl;
 
   factory CreateOrderResult.fromJson(Map<String, dynamic> json) => CreateOrderResult(
         order: Order.fromJson(json['order'] as Map<String, dynamic>),
-        paymentUrl: json['paymentUrl'] as String? ?? '',
+        paymentUrl: (json['paymentUrl'] as String?)?.isEmpty ?? true ? null : json['paymentUrl'] as String,
       );
 }
 

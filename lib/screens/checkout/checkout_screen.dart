@@ -3,7 +3,8 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../models/campaign.dart';
-import '../../providers/main_tab_controller.dart';
+import '../../routes.dart';
+import 'payment_result_screen.dart';
 import '../../services/notification_service.dart';
 import '../../services/voucher_services.dart';
 import '../../theme/app_theme.dart';
@@ -42,23 +43,17 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       final result = await context.read<OrderService>().create(widget.campaign.id, _quantity);
       // LO7: thong bao cuc bo sau thao tac quan trong (tao don, nhac thanh toan trong 15 phut)
       await notifications.orderCreated();
-      final uri = Uri.tryParse(result.paymentUrl);
+      final uri = Uri.tryParse(result.paymentUrl ?? '');
       if (uri != null && uri.hasScheme) {
         await launchUrl(uri, mode: LaunchMode.externalApplication);
       }
       if (!mounted) return;
-      await showDialog<void>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Đã tạo đơn hàng'),
-          content: const Text('Đơn được giữ chỗ trong 15 phút. Sau khi thanh toán thành công, '
-              'voucher sẽ xuất hiện trong ví của bạn.'),
-          actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Xem đơn hàng'))],
-        ),
+      // Man ket qua tu hoi trang thai don tu may chu (FR-ORDER-05)
+      Navigator.pushReplacementNamed(
+        context,
+        AppRoutes.paymentResult,
+        arguments: PaymentResultArgs(order: result.order, paymentUrl: result.paymentUrl),
       );
-      if (!mounted) return;
-      context.read<MainTabController>().go(MainTabController.orders);
-      Navigator.popUntil(context, (route) => route.isFirst);
     } catch (e) {
       setState(() => _error = e.toString());
     } finally {

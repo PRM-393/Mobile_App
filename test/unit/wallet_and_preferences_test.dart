@@ -4,7 +4,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:voucher_platform_mobile/models/order.dart';
+import 'package:voucher_platform_mobile/models/engage.dart';
+import 'package:voucher_platform_mobile/providers/notification_provider.dart';
 import 'package:voucher_platform_mobile/providers/wallet_provider.dart';
 import 'package:voucher_platform_mobile/services/api_client.dart';
 import 'package:voucher_platform_mobile/services/notification_service.dart';
@@ -22,6 +23,16 @@ Map<String, dynamic> voucher(String id, String status, {String title = 'Voucher 
   'campaign': {'id': 'c1', 'title': title, 'salePrice': '80000', 'faceValue': '100000'},
 };
 
+Map<String, dynamic> notification(String id, String createdAt, {bool read = false, String title = 'Voucher đã về ví'}) => {
+  'id': id,
+  'type': 'VOUCHER_ISSUED',
+  'title': title,
+  'body': 'Body $id',
+  'data': {'orderId': 'o-$id'},
+  'createdAt': createdAt,
+  'readAt': read ? createdAt : null,
+};
+
 // Ghi lai cac thong bao thay vi hien len thiet bi
 class RecordingNotifications extends NotificationService {
   final calls = <String>[];
@@ -30,7 +41,20 @@ class RecordingNotifications extends NotificationService {
   Future<void> show(String title, String body) async => calls.add('$title|$body');
 }
 
-// Unit test (Module 11, AAA): logic SharedPreferences va phat hien thay doi vi de ban thong bao (LO7)
+// May chu gia tra { data, error, meta } (F01)
+ApiClient fakeApi(Object? Function(http.Request r) handler, {List<String>? log}) => ApiClient(
+  baseUrl: 'http://api.test/api',
+  httpClient: MockClient((r) async {
+    log?.add('${r.method} ${r.url.path}');
+    return http.Response(
+      jsonEncode({'data': handler(r), 'error': null, 'meta': null}),
+      200,
+      headers: {'content-type': 'application/json; charset=utf-8'},
+    );
+  }),
+);
+
+// Unit test (Module 11, AAA): SharedPreferences, danh sach vi, thong bao (F16 / LO7)
 void main() {
   group('PreferencesService (SharedPreferences - Module 9)', () {
     setUp(() => SharedPreferences.setMockInitialValues({}));
@@ -51,75 +75,110 @@ void main() {
     test('du lieu con sau khi mo lai app; dang xuat thi xoa', () async {
       final first = await PreferencesService.create();
       await first.addRecentKeyword('highlands');
-      await first.saveWalletSnapshot({'v1': 'ACTIVE'});
+      await first.setLastNotifiedAt(DateTime.utc(2026, 10, 20, 3));
 
       final reopened = await PreferencesService.create();
       expect(reopened.recentKeywords, ['highlands']);
-      expect(reopened.walletSnapshot, {'v1': 'ACTIVE'});
+      expect(reopened.lastNotifiedAt, DateTime.utc(2026, 10, 20, 3));
 
       await reopened.clearUserData();
       expect(reopened.recentKeywords, isEmpty);
-      expect(reopened.walletSnapshot, isNull);
+      expect(reopened.lastNotifiedAt, isNull);
     });
   });
 
-  group('diffWallet', () {
-    List<VoucherItem> items(List<Map<String, dynamic>> list) => list.map(VoucherItem.fromJson).toList();
+  test('WalletProvider: danh sach loc giu nguyen doi tuong khi khong doi (Selector khong rebuild thua)', () async {
+    final wallet = WalletProvider(OrderService(fakeApi((_) => [voucher('v1', 'ACTIVE'), voucher('v2', 'USED')])));
+    await wallet.load();
+    expect(wallet.visibleItems.map((v) => v.id), ['v1']);
+    final before = wallet.visibleItems;
+    wallet.selectTab('ACTIVE');
+    expect(identical(before, wallet.visibleItems), isTrue);
+    wallet.selectTab('USED');
+    expect(wallet.visibleItems.map((v) => v.id), ['v2']);
+  });
 
-    test('lan dau (chua co anh chup) khong bao gi ca', () {
-      expect(diffWallet(null, items([voucher('v1', 'ACTIVE')])).isEmpty, isTrue);
-    });
-
-    test('phat hien voucher moi, da dung, da hoan', () {
-      final changes = diffWallet(
-        {'v1': 'ACTIVE', 'v2': 'ACTIVE'},
-        items([
-          voucher('v1', 'USED', title: 'Combo sang'),
-          voucher('v2', 'REFUNDED', title: 'Giam 20%'),
-          voucher('v3', 'ACTIVE'),
-          voucher('v4', 'ACTIVE'),
-        ]),
-      );
-      expect(changes.issued, 2);
-      expect(changes.used, ['Combo sang']);
-      expect(changes.refunded, ['Giam 20%']);
+  group('NotificationPage', () {
+    test('doc { items, unread, total } va van doc duoc mang cu', () {
+      final page = NotificationPage.fromJson({
+        'items': [notification('n1', '2026-10-20T03:00:00Z')],
+        'unread': 1,
+        'total': 1,
+        'page': 1,
+        'pageSize': 20,
+      });
+      expect([page.items.single.data['orderId'], page.unread, page.total], ['o-n1', 1, 1]);
+      final legacy = NotificationPage.fromJson([
+        notification('a', '2026-10-20T03:00:00Z'),
+        notification('b', '2026-10-20T03:00:00Z', read: true),
+      ]);
+      expect(legacy.unread, 1);
     });
   });
 
-  group('WalletProvider ban thong bao cuc bo (LO7)', () {
+  group('NotificationProvider (F16, LO7)', () {
     setUp(() => SharedPreferences.setMockInitialValues({}));
 
-    test('lan tai dau im lang; lan sau co voucher moi va voucher da dung thi thong bao', () async {
-      var response = [voucher('v1', 'ACTIVE')];
-      final api = ApiClient(
-        baseUrl: 'http://api.test/api',
-        httpClient: MockClient(
-          (_) async =>
-              http.Response(jsonEncode(response), 200, headers: {'content-type': 'application/json; charset=utf-8'}),
-        ),
-      );
-      final notifications = RecordingNotifications();
-      final wallet = WalletProvider(
-        OrderService(api),
+    test('lan dau chi ghi moc; lan sau chi bao thong bao moi chua doc len thiet bi', () async {
+      var items = [notification('n1', '2026-10-20T03:00:00Z', title: 'Cu')];
+      final local = RecordingNotifications();
+      final provider = NotificationProvider(
+        EngageService(fakeApi((_) => {'items': items, 'unread': items.length, 'total': items.length})),
+        local: local,
         preferences: await PreferencesService.create(),
-        notifications: notifications,
       );
 
-      await wallet.load();
-      expect(notifications.calls, isEmpty);
-      expect(wallet.visibleItems.map((v) => v.id), ['v1']);
+      await provider.load();
+      expect(local.calls, isEmpty);
+      expect(provider.unread, 1);
 
-      response = [voucher('v1', 'USED', title: 'Voucher 100K'), voucher('v2', 'ACTIVE')];
-      await wallet.load();
-      expect(notifications.calls, [
-        'Voucher đã về ví|Bạn có 1 voucher mới trong ví.',
-        'Đã sử dụng voucher|Voucher 100K',
-      ]);
+      items = [
+        notification('n3', '2026-10-20T05:00:00Z', title: 'Moi 2'),
+        notification('n2', '2026-10-20T04:00:00Z', title: 'Moi 1', read: true),
+        notification('n1', '2026-10-20T03:00:00Z', title: 'Cu'),
+      ];
+      await provider.load(silent: true);
+      expect(local.calls, ['Moi 2|Body n3']);
 
-      // Danh sach loc giu nguyen doi tuong khi khong doi tab / du lieu (Selector khong rebuild thua)
-      final before = wallet.visibleItems;
-      wallet.selectTab('ACTIVE');
-      expect(identical(before, wallet.visibleItems), isTrue);
+      // Tai lai khong bao trung
+      await provider.load(silent: true);
+      expect(local.calls, hasLength(1));
+    });
+
+    test('danh dau da doc cap nhat ngay tren man hinh va goi may chu', () async {
+      final log = <String>[];
+      final provider = NotificationProvider(EngageService(fakeApi((r) {
+        if (r.url.path.endsWith('/notifications/me')) {
+          return {
+            'items': [notification('n1', '2026-10-20T03:00:00Z'), notification('n2', '2026-10-20T04:00:00Z')],
+            'unread': 2,
+            'total': 2,
+          };
+        }
+        return null;
+      }, log: log)));
+      await provider.load();
+      await provider.markRead(provider.items.first);
+      expect(provider.unread, 1);
+      expect(provider.items.first.isRead, isTrue);
+      await provider.markAllRead();
+      expect(provider.unread, 0);
+      expect(log, containsAll(['PATCH /api/notifications/n1/read', 'PATCH /api/notifications/read-all']));
+    });
+
+    test('tat mot nhom thong bao goi PUT /notifications/settings', () async {
+      final log = <String>[];
+      final provider = NotificationProvider(EngageService(fakeApi((r) {
+        final enabled = r.method == 'PUT' ? (jsonDecode(r.body) as Map)['enabled'] : true;
+        return [
+          {'type': 'VOUCHER_ISSUED', 'label': 'Voucher đã phát hành', 'enabled': enabled},
+        ];
+      }, log: log)));
+      await provider.loadSettings();
+      expect(provider.settings.single.enabled, isTrue);
+      await provider.toggleSetting('VOUCHER_ISSUED', false);
+      expect(provider.settings.single.enabled, isFalse);
+      expect(log, contains('PUT /api/notifications/settings'));
     });
   });
 }

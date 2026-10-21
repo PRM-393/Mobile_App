@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../models/campaign.dart';
+import '../../providers/notification_provider.dart';
 import '../../routes.dart';
 import '../../services/voucher_services.dart';
 import '../../theme/app_theme.dart';
@@ -50,9 +51,18 @@ class _HomeScreenState extends State<HomeScreen> {
         appBar: AppBar(
           title: const Text('Khám phá ưu đãi', style: TextStyle(fontWeight: FontWeight.w800)),
           actions: [
-            IconButton(
-              icon: const Icon(Icons.notifications_outlined),
-              onPressed: () => AppRoutes.push(context, AppRoutes.notifications),
+            // F16: so thong bao chua doc (Selector: chi rebuild chuong khi so thay doi)
+            Selector<NotificationProvider, int>(
+              selector: (_, n) => n.unread,
+              builder: (context, unread, _) => IconButton(
+                tooltip: 'Thông báo',
+                icon: Badge(
+                  isLabelVisible: unread > 0,
+                  label: Text(unread > 99 ? '99+' : '$unread'),
+                  child: const Icon(Icons.notifications_outlined),
+                ),
+                onPressed: () => AppRoutes.push(context, AppRoutes.notifications),
+              ),
             ),
           ],
         ),
