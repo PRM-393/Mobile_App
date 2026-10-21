@@ -26,32 +26,48 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(title: const Text('Thông báo')),
-        body: FutureBuilder<List<AppNotification>>(
-          future: _future,
-          builder: (context, snap) {
-            if (snap.connectionState != ConnectionState.done) return const LoadingState();
-            if (snap.hasError) return ErrorState(snap.error.toString());
-            final items = snap.data!;
-            if (items.isEmpty) return const EmptyState('Chưa có thông báo nào.', icon: Icons.notifications_none);
-            return ListView.separated(
-              padding: const EdgeInsets.all(AppSpacing.md),
-              itemCount: items.length,
-              separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.sm),
-              itemBuilder: (context, i) {
-                final n = items[i];
-                return Card(
-                  child: ListTile(
-                    leading: Icon(n.readAt == null ? Icons.circle_notifications : Icons.notifications_none,
-                        color: n.readAt == null ? AppColors.primary : AppColors.textSecondary),
-                    title: Text(n.title, style: const TextStyle(fontWeight: FontWeight.w700)),
-                    subtitle: Text('${n.body}\n${formatDateTime(n.createdAt)}'),
-                    isThreeLine: true,
-                  ),
-                );
-              },
+    appBar: AppBar(title: const Text('Thông báo')),
+    body: FutureBuilder<List<AppNotification>>(
+      future: _future,
+      builder: (context, snap) {
+        if (snap.connectionState != ConnectionState.done) {
+          return const LoadingState();
+        }
+        if (snap.hasError) return ErrorState(snap.error.toString());
+        final items = snap.data!;
+        if (items.isEmpty) {
+          return const EmptyState(
+            'Chưa có thông báo nào.',
+            icon: Icons.notifications_none,
+          );
+        }
+        return ListView.separated(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          itemCount: items.length,
+          separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.sm),
+          itemBuilder: (context, i) {
+            final n = items[i];
+            return Card(
+              child: ListTile(
+                leading: Icon(
+                  n.readAt == null
+                      ? Icons.circle_notifications
+                      : Icons.notifications_none,
+                  color: n.readAt == null
+                      ? AppColors.primary
+                      : AppColors.textSecondary,
+                ),
+                title: Text(
+                  n.title,
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
+                subtitle: Text('${n.body}\n${formatDateTime(n.createdAt)}'),
+                isThreeLine: true,
+              ),
             );
           },
-        ),
-      );
+        );
+      },
+    ),
+  );
 }

@@ -39,7 +39,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     });
     try {
       final notifications = context.read<NotificationService>();
-      final result = await context.read<OrderService>().create(widget.campaign.id, _quantity);
+      final result = await context.read<OrderService>().create(
+        widget.campaign.id,
+        _quantity,
+      );
       // LO7: thong bao cuc bo sau thao tac quan trong (tao don, nhac thanh toan trong 15 phut)
       await notifications.orderCreated();
       final uri = Uri.tryParse(result.paymentUrl);
@@ -51,9 +54,16 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         context: context,
         builder: (context) => AlertDialog(
           title: const Text('Đã tạo đơn hàng'),
-          content: const Text('Đơn được giữ chỗ trong 15 phút. Sau khi thanh toán thành công, '
-              'voucher sẽ xuất hiện trong ví của bạn.'),
-          actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Xem đơn hàng'))],
+          content: const Text(
+            'Đơn được giữ chỗ trong 15 phút. Sau khi thanh toán thành công, '
+            'voucher sẽ xuất hiện trong ví của bạn.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Xem đơn hàng'),
+            ),
+          ],
         ),
       );
       if (!mounted) return;
@@ -76,35 +86,65 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         children: [
           SectionCard(
             title: c.title,
-            child: Text('Đơn giá: ${formatVnd(c.salePrice)}', style: const TextStyle(color: AppColors.textSecondary)),
+            child: Text(
+              'Đơn giá: ${formatVnd(c.salePrice)}',
+              style: const TextStyle(color: AppColors.textSecondary),
+            ),
           ),
           const SizedBox(height: AppSpacing.md),
-          const Text('Số lượng', style: TextStyle(color: AppColors.textSecondary)),
+          const Text(
+            'Số lượng',
+            style: TextStyle(color: AppColors.textSecondary),
+          ),
           Row(
             children: [
               IconButton.outlined(
-                onPressed: _quantity > 1 ? () => setState(() => _quantity--) : null,
+                onPressed: _quantity > 1
+                    ? () => setState(() => _quantity--)
+                    : null,
                 icon: const Icon(Icons.remove),
               ),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-                child: Text('$_quantity', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
+                child: Text(
+                  '$_quantity',
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
               ),
               IconButton.outlined(
-                onPressed: _quantity < _maxQuantity ? () => setState(() => _quantity++) : null,
+                onPressed: _quantity < _maxQuantity
+                    ? () => setState(() => _quantity++)
+                    : null,
                 icon: const Icon(Icons.add),
               ),
             ],
           ),
-          Text('Tối đa $_maxQuantity voucher cho mỗi tài khoản trong chiến dịch này.',
-              style: const TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+          Text(
+            'Tối đa $_maxQuantity voucher cho mỗi tài khoản trong chiến dịch này.',
+            style: const TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 12,
+            ),
+          ),
           const Divider(height: AppSpacing.xl),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Tổng tiền', style: TextStyle(fontWeight: FontWeight.w600)),
-              Text(formatVnd(c.salePrice * _quantity),
-                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: AppColors.primary)),
+              const Text(
+                'Tổng tiền',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
+              Text(
+                formatVnd(c.salePrice * _quantity),
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.primary,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: AppSpacing.sm),
@@ -118,7 +158,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             Text(_error!, style: const TextStyle(color: AppColors.danger)),
           ],
           const SizedBox(height: AppSpacing.lg),
-          PrimaryButton(label: 'Tiến hành thanh toán', loading: _loading, onPressed: _maxQuantity > 0 ? _pay : null),
+          PrimaryButton(
+            label: 'Tiến hành thanh toán',
+            loading: _loading,
+            onPressed: _maxQuantity > 0 ? _pay : null,
+          ),
         ],
       ),
     );

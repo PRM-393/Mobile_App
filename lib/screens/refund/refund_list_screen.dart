@@ -26,32 +26,39 @@ class _RefundListScreenState extends State<RefundListScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(title: const Text('Yêu cầu hoàn tiền')),
-        body: FutureBuilder<List<RefundRequest>>(
-          future: _future,
-          builder: (context, snap) {
-            if (snap.connectionState != ConnectionState.done) return const LoadingState();
-            if (snap.hasError) return ErrorState(snap.error.toString());
-            final items = snap.data!;
-            if (items.isEmpty) return const EmptyState('Bạn chưa gửi yêu cầu hoàn tiền nào.');
-            return ListView.separated(
-              padding: const EdgeInsets.all(AppSpacing.md),
-              itemCount: items.length,
-              separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.sm),
-              itemBuilder: (context, i) {
-                final r = items[i];
-                return Card(
-                  child: ListTile(
-                    title: Text(refundStatusLabels[r.status] ?? r.status),
-                    subtitle: Text([
-                      formatDateTime(r.createdAt),
-                      if (r.rejectReason != null) 'Lý do từ chối: ${r.rejectReason}',
-                    ].join('\n')),
-                  ),
-                );
-              },
+    appBar: AppBar(title: const Text('Yêu cầu hoàn tiền')),
+    body: FutureBuilder<List<RefundRequest>>(
+      future: _future,
+      builder: (context, snap) {
+        if (snap.connectionState != ConnectionState.done) {
+          return const LoadingState();
+        }
+        if (snap.hasError) return ErrorState(snap.error.toString());
+        final items = snap.data!;
+        if (items.isEmpty) {
+          return const EmptyState('Bạn chưa gửi yêu cầu hoàn tiền nào.');
+        }
+        return ListView.separated(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          itemCount: items.length,
+          separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.sm),
+          itemBuilder: (context, i) {
+            final r = items[i];
+            return Card(
+              child: ListTile(
+                title: Text(refundStatusLabels[r.status] ?? r.status),
+                subtitle: Text(
+                  [
+                    formatDateTime(r.createdAt),
+                    if (r.rejectReason != null)
+                      'Lý do từ chối: ${r.rejectReason}',
+                  ].join('\n'),
+                ),
+              ),
             );
           },
-        ),
-      );
+        );
+      },
+    ),
+  );
 }

@@ -7,7 +7,11 @@ import '../services/voucher_services.dart';
 
 // Thay doi cua vi giua hai lan tai: dung de ban thong bao cuc bo (LO7)
 class WalletChanges {
-  const WalletChanges({this.issued = 0, this.used = const [], this.refunded = const []});
+  const WalletChanges({
+    this.issued = 0,
+    this.used = const [],
+    this.refunded = const [],
+  });
 
   final int issued;
   final List<String> used;
@@ -18,7 +22,10 @@ class WalletChanges {
 
 // So sanh anh chup lan truoc (voucherId -> trang thai) voi danh sach moi.
 // previous == null (lan dau mo app / vua dang nhap) thi khong bao gi ca de tranh bao lai voucher cu.
-WalletChanges diffWallet(Map<String, String>? previous, List<VoucherItem> items) {
+WalletChanges diffWallet(
+  Map<String, String>? previous,
+  List<VoucherItem> items,
+) {
   if (previous == null) return const WalletChanges();
   var issued = 0;
   final used = <String>[], refunded = <String>[];
@@ -66,7 +73,9 @@ class WalletProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  void _refilter() => _visible = _items.where((i) => i.effectiveStatus == _tab).toList(growable: false);
+  void _refilter() => _visible = _items
+      .where((i) => i.effectiveStatus == _tab)
+      .toList(growable: false);
 
   Future<void> load() async {
     _loading = true;

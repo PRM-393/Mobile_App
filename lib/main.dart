@@ -20,7 +20,11 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   final api = ApiClient(baseUrl: Env.apiBaseUrl);
-  final auth = AuthProvider(api: api, authService: AuthService(api), storage: TokenStorage());
+  final auth = AuthProvider(
+    api: api,
+    authService: AuthService(api, deviceId: TokenStorage().deviceId),
+    storage: TokenStorage(),
+  );
   final notifications = NotificationService();
   final preferences = await PreferencesService.create();
   await Future.wait([auth.hydrate(), notifications.init()]);
@@ -48,9 +52,16 @@ Future<void> main() async {
         Provider(create: (_) => EngageService(api)),
         ChangeNotifierProvider.value(value: auth),
         ChangeNotifierProvider(create: (_) => MainTabController()),
-        ChangeNotifierProvider(create: (_) => SearchProvider(searchService, preferences: preferences)),
         ChangeNotifierProvider(
-          create: (_) => WalletProvider(orderService, preferences: preferences, notifications: notifications),
+          create: (_) =>
+              SearchProvider(searchService, preferences: preferences),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => WalletProvider(
+            orderService,
+            preferences: preferences,
+            notifications: notifications,
+          ),
         ),
       ],
       child: const VoucherApp(),
@@ -63,10 +74,10 @@ class VoucherApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => MaterialApp(
-        title: 'Voucher Platform',
-        debugShowCheckedModeBanner: false,
-        theme: buildAppTheme(),
-        initialRoute: AppRoutes.main,
-        onGenerateRoute: AppRoutes.onGenerateRoute,
-      );
+    title: 'Voucher Platform',
+    debugShowCheckedModeBanner: false,
+    theme: buildAppTheme(),
+    initialRoute: AppRoutes.main,
+    onGenerateRoute: AppRoutes.onGenerateRoute,
+  );
 }

@@ -46,7 +46,9 @@ class _LoginScreenState extends State<LoginScreen> {
     });
     try {
       await context.read<AuthProvider>().requestOtp(email);
-      if (mounted) Navigator.pushNamed(context, AppRoutes.otp, arguments: email);
+      if (mounted) {
+        Navigator.pushNamed(context, AppRoutes.otp, arguments: email);
+      }
     } catch (e) {
       setState(() => _error = 'Không thể gửi mã OTP lúc này. $e');
     } finally {
@@ -56,45 +58,61 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(),
-        body: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(AppSpacing.lg),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const Icon(Icons.local_offer, size: 56, color: AppColors.primary),
-                  const SizedBox(height: AppSpacing.md),
-                  const Text('Voucher Platform',
-                      textAlign: TextAlign.center, style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800)),
-                  const Text('Ưu đãi đa thương hiệu, dùng ngay tại cửa hàng',
-                      textAlign: TextAlign.center, style: TextStyle(color: AppColors.textSecondary)),
-                  const SizedBox(height: AppSpacing.xl),
-                  TextFormField(
-                    key: const Key('emailField'),
-                    controller: _emailController,
-                    keyboardType: TextInputType.emailAddress,
-                    autofillHints: const [AutofillHints.email],
-                    textInputAction: TextInputAction.done,
-                    decoration: const InputDecoration(labelText: 'Email', hintText: 'ban@vidu.com'),
-                    validator: validateEmail,
-                    onFieldSubmitted: (_) => _submit(),
-                  ),
-                  if (_error != null) ...[
-                    const SizedBox(height: AppSpacing.sm),
-                    Text(_error!, style: const TextStyle(color: AppColors.danger)),
-                  ],
-                  const SizedBox(height: AppSpacing.md),
-                  PrimaryButton(label: 'Gửi mã OTP', loading: _loading, onPressed: _submit),
-                  const SizedBox(height: AppSpacing.sm),
-                  const Text('Mã OTP 6 số có hiệu lực 5 phút.',
-                      textAlign: TextAlign.center, style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
-                ],
+    appBar: AppBar(),
+    body: SafeArea(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Icon(Icons.local_offer, size: 56, color: AppColors.primary),
+              const SizedBox(height: AppSpacing.md),
+              const Text(
+                'Voucher Platform',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800),
               ),
-            ),
+              const Text(
+                'Ưu đãi đa thương hiệu, dùng ngay tại cửa hàng',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: AppColors.textSecondary),
+              ),
+              const SizedBox(height: AppSpacing.xl),
+              TextFormField(
+                key: const Key('emailField'),
+                controller: _emailController,
+                keyboardType: TextInputType.emailAddress,
+                autofillHints: const [AutofillHints.email],
+                textInputAction: TextInputAction.done,
+                decoration: const InputDecoration(
+                  labelText: 'Email',
+                  hintText: 'ban@vidu.com',
+                ),
+                validator: validateEmail,
+                onFieldSubmitted: (_) => _submit(),
+              ),
+              if (_error != null) ...[
+                const SizedBox(height: AppSpacing.sm),
+                Text(_error!, style: const TextStyle(color: AppColors.danger)),
+              ],
+              const SizedBox(height: AppSpacing.md),
+              PrimaryButton(
+                label: 'Gửi mã OTP',
+                loading: _loading,
+                onPressed: _submit,
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              const Text(
+                'Mã OTP 6 số có hiệu lực 5 phút.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+              ),
+            ],
           ),
         ),
-      );
+      ),
+    ),
+  );
 }

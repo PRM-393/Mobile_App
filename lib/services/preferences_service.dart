@@ -14,16 +14,24 @@ class PreferencesService {
   static const _recentKeywordsKey = 'recent_keywords';
   static const _walletSnapshotKey = 'wallet_snapshot';
 
-  static Future<PreferencesService> create() async => PreferencesService(await SharedPreferences.getInstance());
+  static Future<PreferencesService> create() async =>
+      PreferencesService(await SharedPreferences.getInstance());
 
   // ---- Tu khoa tim kiem gan day: moi nhat dung dau, khong trung, toi da 8 ----
-  List<String> get recentKeywords => _prefs.getStringList(_recentKeywordsKey) ?? const [];
+  List<String> get recentKeywords =>
+      _prefs.getStringList(_recentKeywordsKey) ?? const [];
 
   Future<void> addRecentKeyword(String keyword) async {
     final k = keyword.trim();
     if (k.isEmpty) return;
-    final list = [k, ...recentKeywords.where((e) => e.toLowerCase() != k.toLowerCase())];
-    await _prefs.setStringList(_recentKeywordsKey, list.take(maxRecentKeywords).toList());
+    final list = [
+      k,
+      ...recentKeywords.where((e) => e.toLowerCase() != k.toLowerCase()),
+    ];
+    await _prefs.setStringList(
+      _recentKeywordsKey,
+      list.take(maxRecentKeywords).toList(),
+    );
   }
 
   Future<void> clearRecentKeywords() => _prefs.remove(_recentKeywordsKey);
@@ -33,7 +41,9 @@ class PreferencesService {
     final raw = _prefs.getString(_walletSnapshotKey);
     if (raw == null) return null;
     try {
-      return (jsonDecode(raw) as Map<String, dynamic>).map((k, v) => MapEntry(k, v as String));
+      return (jsonDecode(raw) as Map<String, dynamic>).map(
+        (k, v) => MapEntry(k, v as String),
+      );
     } catch (_) {
       return null;
     }

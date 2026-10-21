@@ -3,144 +3,396 @@ import 'package:provider/provider.dart';
 
 import '../../models/campaign.dart';
 import '../../providers/search_provider.dart';
+import '../../services/voucher_services.dart';
 import '../../routes.dart';
-import '../../theme/app_theme.dart';
-import '../../utils/distance.dart';
 import '../../widgets/common.dart';
 import '../../widgets/voucher_card.dart';
+import '../../utils/distance.dart';
+import 'store_map_screen.dart';
 
-// FR-SEARCH-02/03/05/06: tim theo tu khoa, loc "gan toi" theo ban kinh, luoi responsive (Module 6)
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});
-
   @override
   State<SearchScreen> createState() => _SearchScreenState();
 }
 
 class _SearchScreenState extends State<SearchScreen> {
-  final _controller = TextEditingController();
-
+  final _keyword = TextEditingController();
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => context.read<SearchProvider>().search());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) context.read<SearchProvider>().search();
+    });
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _keyword.dispose();
     super.dispose();
+  }
+
+  Future<void> _filters() async {
+    final search = context.read<SearchProvider>();
+    final applied = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) =>
+          _FilterSheet(search: search, service: context.read<SearchService>()),
+    );
+    if (applied == true) await search.search();
+  }
+
+  Future<void> _map() async {
+    final search = context.read<SearchProvider>();
+    if (!search.hasLocation && !await search.ensureLocation()) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Chưa có quyền vị trí. Bạn vẫn có thể xem danh sách.',
+            ),
+          ),
+        );
+      }
+      return;
+    }
+    if (!mounted) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => StoreMapScreen(
+          campaigns: search.results,
+          latitude: search.latitude,
+          longitude: search.longitude,
+          radiusKm: search.radiusKm,
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final search = context.watch<SearchProvider>();
     return Scaffold(
-      appBar: AppBar(title: const Text('Tìm kiếm')),
+      appBar: AppBar(
+        title: const Text('Tìm kiếm voucher'),
+        actions: [
+          IconButton(
+            tooltip: 'Bản đồ',
+            onPressed: _map,
+            icon: const Icon(Icons.map_outlined),
+          ),
+        ],
+      ),
       body: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.sm, AppSpacing.md, 0),
-            child: TextField(
-              controller: _controller,
-              textInputAction: TextInputAction.search,
-              decoration: const InputDecoration(
-                prefixIcon: Icon(Icons.search),
-                hintText: 'Tìm voucher hoặc thương hiệu...',
-              ),
-              onSubmitted: search.setKeyword,
-            ),
-          ),
-          // Tu khoa gan day doc tu SharedPreferences (Module 9)
-          if (search.recentKeywords.isNotEmpty)
-            SizedBox(
-              height: 44,
-              child: ListView(
-                key: const Key('recent-keywords'),
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-                children: [
-                  for (final k in search.recentKeywords)
-                    Padding(
-                      padding: const EdgeInsets.only(right: AppSpacing.sm),
-                      child: ActionChip(
-                        avatar: const Icon(Icons.history, size: 16),
-                        label: Text(k),
-                        onPressed: () {
-                          _controller.text = k;
-                          search.setKeyword(k);
-                        },
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    key: const Key('search-keyword'),
+                    controller: _keyword,
+                    textInputAction: TextInputAction.search,
+                    onSubmitted: search.setKeyword,
+                    decoration: InputDecoration(
+                      hintText: 'Tên voucher hoặc thương hiệu',
+                      suffixIcon: IconButton(
+                        tooltip: 'Tìm kiếm',
+                        onPressed: () => search.setKeyword(_keyword.text),
+                        icon: const Icon(Icons.search),
                       ),
                     ),
-                  TextButton(onPressed: search.clearRecentKeywords, child: const Text('Xóa lịch sử')),
-                ],
-              ),
+                  ),
+                ),
+                IconButton(
+                  tooltip: 'Bộ lọc',
+                  onPressed: _filters,
+                  icon: const Icon(Icons.tune),
+                ),
+              ],
             ),
-          SizedBox(
-            height: 52,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
+          ),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
               children: [
-                _radiusChip(search, null, 'Tất cả'),
-                for (final km in radiusOptionsKm) _radiusChip(search, km, 'Gần tôi $km km'),
+                Padding(
+                  padding: const EdgeInsets.only(left: 16, right: 8),
+                  child: ChoiceChip(
+                    label: const Text('Tất cả'),
+                    selected: search.radiusKm == null,
+                    onSelected: (_) => search.setRadius(null),
+                  ),
+                ),
+                for (final km in radiusOptionsKm)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: ChoiceChip(
+                      label: Text('Gần tôi $km km'),
+                      selected: search.radiusKm == km,
+                      onSelected: (_) => search.setRadius(km),
+                    ),
+                  ),
               ],
             ),
           ),
           if (search.locationDenied)
             const Padding(
-              padding: EdgeInsets.symmetric(horizontal: AppSpacing.md),
+              padding: EdgeInsets.all(12),
               child: Text(
-                'Không truy cập được vị trí nên không thể lọc theo khoảng cách. Đang hiện danh sách mặc định.',
-                style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                'Chưa được cấp vị trí. Đang hiển thị danh sách mặc định.',
               ),
             ),
-          // Module 12: luoi ket qua chi rebuild khi ket qua / trang thai tai thay doi
-          Expanded(
-            child: Selector<SearchProvider, (bool, String?, List<VoucherCampaign>, int?, bool)>(
-              selector: (_, s) => (s.loading, s.error, s.results, s.radiusKm, s.hasLocation),
-              builder: (context, state, _) => _results(context.read<SearchProvider>(), state),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text('${search.total} kết quả'),
             ),
+          ),
+          Expanded(
+            child: search.loading
+                ? const LoadingState()
+                : search.results.isEmpty
+                ? search.error != null
+                      ? ErrorState(search.error!, onRetry: search.search)
+                      : const EmptyState('Không tìm thấy voucher phù hợp')
+                : RefreshIndicator(
+                    onRefresh: search.search,
+                    child: ListView.builder(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: search.results.length + 1,
+                      itemBuilder: (context, i) {
+                        if (i == search.results.length) {
+                          return Column(
+                            children: [
+                              if (search.error != null) Text(search.error!),
+                              if (search.hasMore)
+                                TextButton(
+                                  onPressed: search.loadingMore
+                                      ? null
+                                      : search.loadMore,
+                                  child: Text(
+                                    search.loadingMore
+                                        ? 'Đang tải…'
+                                        : 'Tải thêm',
+                                  ),
+                                ),
+                            ],
+                          );
+                        }
+                        final c = search.results[i];
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 16),
+                          child: Center(
+                            child: SizedBox(
+                              width: 400,
+                              height: 420,
+                              child: VoucherCard(
+                                campaign: c,
+                                distanceLabel: c.distanceKm == null
+                                    ? null
+                                    : formatDistance(c.distanceKm!),
+                                onTap: () => AppRoutes.push(
+                                  context,
+                                  AppRoutes.voucherDetail,
+                                  arguments: c.id,
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
           ),
         ],
       ),
     );
   }
+}
 
-  Widget _radiusChip(SearchProvider search, int? km, String label) => Padding(
-        padding: const EdgeInsets.only(right: AppSpacing.sm),
-        child: ChoiceChip(label: Text(label), selected: search.radiusKm == km, onSelected: (_) => search.setRadius(km)),
-      );
+class _FilterSheet extends StatefulWidget {
+  const _FilterSheet({required this.search, required this.service});
+  final SearchProvider search;
+  final SearchService service;
+  @override
+  State<_FilterSheet> createState() => _FilterSheetState();
+}
 
-  Widget _results(SearchProvider search, (bool, String?, List<VoucherCampaign>, int?, bool) state) {
-    final (loading, error, results, radiusKm, hasLocation) = state;
-    if (loading && results.isEmpty) return const LoadingState();
-    if (error != null) return ErrorState(error, onRetry: search.search);
-    if (results.isEmpty) return const EmptyState('Không tìm thấy voucher phù hợp');
-    return RefreshIndicator(
-      onRefresh: search.search,
-      // LayoutBuilder: so cot thay doi theo be rong man hinh (dien thoai nho / lon / tablet)
-      child: LayoutBuilder(
-        builder: (context, constraints) => GridView.builder(
-          padding: const EdgeInsets.all(AppSpacing.md),
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: (constraints.maxWidth / 200).floor().clamp(2, 5),
-            mainAxisSpacing: AppSpacing.md,
-            crossAxisSpacing: AppSpacing.md,
-            childAspectRatio: 0.68,
-          ),
-          itemCount: results.length,
-          itemBuilder: (context, i) {
-            final c = results[i];
-            return VoucherCard(
-              key: ValueKey(c.id),
-              campaign: c,
-              distanceLabel: radiusKm != null && hasLocation ? 'Trong bán kính $radiusKm km' : null,
-              onTap: () => AppRoutes.push(context, AppRoutes.voucherDetail, arguments: c.id),
-            );
-          },
+class _FilterSheetState extends State<_FilterSheet> {
+  final _form = GlobalKey<FormState>();
+  late final _categories = widget.service.categories();
+  late String _sort = widget.search.sort;
+  late String? _category = widget.search.categoryId;
+  late final _min = TextEditingController(
+    text: widget.search.minPrice?.toString() ?? '',
+  );
+  late final _max = TextEditingController(
+    text: widget.search.maxPrice?.toString() ?? '',
+  );
+  late final _discount = TextEditingController(
+    text: widget.search.minDiscount?.toString() ?? '',
+  );
+  late final _discountMax = TextEditingController(
+    text: widget.search.maxDiscount?.toString() ?? '',
+  );
+  @override
+  void dispose() {
+    _min.dispose();
+    _max.dispose();
+    _discount.dispose();
+    _discountMax.dispose();
+    super.dispose();
+  }
+
+  String? money(String? v) =>
+      v == null || v.isEmpty || int.tryParse(v) != null && int.parse(v) >= 0
+      ? null
+      : 'Nhập số nguyên không âm';
+  String? percent(String? v) =>
+      v == null ||
+          v.isEmpty ||
+          double.tryParse(v) != null &&
+              double.parse(v) >= 0 &&
+              double.parse(v) <= 100
+      ? null
+      : 'Nhập từ 0 đến 100';
+  @override
+  Widget build(BuildContext context) => SafeArea(
+    child: SingleChildScrollView(
+      padding: EdgeInsets.fromLTRB(
+        24,
+        24,
+        24,
+        MediaQuery.viewInsetsOf(context).bottom + 24,
+      ),
+      child: Form(
+        key: _form,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'Lọc và sắp xếp',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 16),
+            FutureBuilder<List<Category>>(
+              future: _categories,
+              builder: (context, snap) => snap.hasError
+                  ? const Text(
+                      'Không tải được danh mục. Bạn vẫn có thể lọc giá.',
+                    )
+                  : DropdownButtonFormField<String>(
+                      initialValue:
+                          snap.data?.any((c) => c.id == _category) == true
+                          ? _category
+                          : '',
+                      isExpanded: true,
+                      decoration: const InputDecoration(labelText: 'Danh mục'),
+                      items: [
+                        const DropdownMenuItem(
+                          value: '',
+                          child: Text('Tất cả'),
+                        ),
+                        for (final c in snap.data ?? <Category>[])
+                          DropdownMenuItem(value: c.id, child: Text(c.name)),
+                      ],
+                      onChanged: (v) => _category = v,
+                    ),
+            ),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<String>(
+              initialValue: _sort,
+              decoration: const InputDecoration(labelText: 'Sắp xếp'),
+              items: [
+                for (final entry in {
+                  'newest': 'Mới nhất',
+                  'best_seller': 'Bán chạy',
+                  'price_asc': 'Giá tăng dần',
+                  'price_desc': 'Giá giảm dần',
+                  'discount_desc': 'Giảm nhiều nhất',
+                  if (widget.search.hasLocation) 'distance_asc': 'Gần nhất',
+                }.entries)
+                  DropdownMenuItem(value: entry.key, child: Text(entry.value)),
+              ],
+              onChanged: (v) => _sort = v!,
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _min,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(labelText: 'Giá từ (VND)'),
+              validator: money,
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _max,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(labelText: 'Giá đến (VND)'),
+              validator: (v) =>
+                  money(v) ??
+                  (int.tryParse(v ?? '') != null &&
+                          int.tryParse(_min.text) != null &&
+                          int.parse(v!) < int.parse(_min.text)
+                      ? 'Giá đến phải lớn hơn hoặc bằng giá từ'
+                      : null),
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _discount,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: 'Giảm tối thiểu (%)',
+              ),
+              validator: percent,
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _discountMax,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(labelText: 'Giảm tối đa (%)'),
+              validator: (v) =>
+                  percent(v) ??
+                  (double.tryParse(v ?? '') != null &&
+                          double.tryParse(_discount.text) != null &&
+                          double.parse(v!) < double.parse(_discount.text)
+                      ? 'Mức tối đa phải lớn hơn hoặc bằng tối thiểu'
+                      : null),
+            ),
+            const SizedBox(height: 16),
+            FilledButton(
+              onPressed: () {
+                if (!_form.currentState!.validate()) return;
+                final s = widget.search;
+                s.categoryId = _category;
+                s.sort = _sort;
+                s.minPrice = int.tryParse(_min.text);
+                s.maxPrice = int.tryParse(_max.text);
+                s.minDiscount = double.tryParse(_discount.text);
+                s.maxDiscount = double.tryParse(_discountMax.text);
+                Navigator.pop(context, true);
+              },
+              child: const Text('Áp dụng'),
+            ),
+            TextButton(
+              onPressed: () {
+                final s = widget.search;
+                s.categoryId = null;
+                s.sort = 'newest';
+                s.minPrice = s.maxPrice = null;
+                s.minDiscount = s.maxDiscount = null;
+                Navigator.pop(context, true);
+              },
+              child: const Text('Xóa bộ lọc'),
+            ),
+          ],
         ),
       ),
-    );
-  }
+    ),
+  );
 }

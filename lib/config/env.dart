@@ -10,5 +10,8 @@ class Env {
 
   static const defaultBackend = 'https://voucher-platform-api.onrender.com/api';
 
-  static const String apiBaseUrl = String.fromEnvironment('API_BASE_URL', defaultValue: defaultBackend);
+  static const String apiBaseUrl = String.fromEnvironment(
+    'API_BASE_URL',
+    defaultValue: defaultBackend,
+  );
 }

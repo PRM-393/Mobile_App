@@ -33,10 +33,22 @@ class AppRoutes {
   static const favorites = '/favorites';
 
   // Cac man hinh can dang nhap (protected routes - Module 10, FR-AUTH-11)
-  static const protected = {checkout, redeemQr, refundRequest, refundList, review, notifications, favorites};
+  static const protected = {
+    checkout,
+    redeemQr,
+    refundRequest,
+    refundList,
+    review,
+    notifications,
+    favorites,
+  };
 
   // Mo man hinh; neu can dang nhap ma dang la Guest thi chuyen sang man dang nhap
-  static Future<void> push(BuildContext context, String name, {Object? arguments}) {
+  static Future<void> push(
+    BuildContext context,
+    String name, {
+    Object? arguments,
+  }) {
     if (protected.contains(name) && !context.read<AuthProvider>().isLoggedIn) {
       return Navigator.pushNamed(context, login);
     }
@@ -59,6 +71,13 @@ class AppRoutes {
       favorites => const FavoritesScreen(),
       _ => const Scaffold(body: Center(child: Text('Không tìm thấy màn hình'))),
     };
-    return MaterialPageRoute(settings: settings, builder: (_) => page);
+    return MaterialPageRoute(
+      settings: settings,
+      builder: (context) =>
+          protected.contains(settings.name) &&
+              !context.watch<AuthProvider>().isLoggedIn
+          ? const LoginScreen()
+          : page,
+    );
   }
 }
