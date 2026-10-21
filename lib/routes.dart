@@ -17,6 +17,7 @@ import 'screens/redeem/redeem_qr_screen.dart';
 import 'screens/refund/refund_list_screen.dart';
 import 'screens/refund/refund_request_screen.dart';
 import 'screens/voucher/voucher_detail_screen.dart';
+import 'screens/wallet/wallet_voucher_screen.dart';
 
 // Named routes (Navigator 1.0 - Module 5). Tham so truyen qua RouteSettings.arguments.
 class AppRoutes {
@@ -35,9 +36,21 @@ class AppRoutes {
   static const notifications = '/notifications';
   static const notificationSettings = '/notification-settings';
   static const favorites = '/favorites';
+  static const walletVoucher = '/wallet-voucher';
 
   // Cac man hinh can dang nhap (protected routes - Module 10, FR-AUTH-11)
-  static const protected = {checkout, paymentResult, redeemQr, refundRequest, refundList, review, notifications, notificationSettings, favorites};
+  static const protected = {
+    checkout,
+    paymentResult,
+    redeemQr,
+    refundRequest,
+    refundList,
+    review,
+    notifications,
+    notificationSettings,
+    favorites,
+    walletVoucher,
+  };
 
   // Mo man hinh; neu can dang nhap ma dang la Guest thi chuyen sang man dang nhap
   static Future<void> push(BuildContext context, String name, {Object? arguments}) {
@@ -59,7 +72,8 @@ class AppRoutes {
       redeemQr => RedeemQrScreen(voucher: args as VoucherItem),
       refundRequest => RefundRequestScreen(voucher: args as VoucherItem),
       refundList => const RefundListScreen(),
-      review => ReviewScreen(voucher: args as VoucherItem),
+      review => ReviewScreen(args: args as ReviewArgs),
+      walletVoucher => WalletVoucherScreen(voucher: args as VoucherItem),
       notifications => const NotificationsScreen(),
       notificationSettings => const NotificationSettingsScreen(),
       favorites => const FavoritesScreen(),

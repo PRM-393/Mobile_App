@@ -63,7 +63,17 @@ class OrderService {
     return Order.fromJson(json['order'] as Map<String, dynamic>);
   }
 
-  Future<List<VoucherItem>> myWallet() async => asList(await _api.get('/wallet'), VoucherItem.fromJson);
+  // FR-REDEEM-01: JSON goc cua vi (WalletProvider luu nguyen vao SQLite de xem khi mat mang)
+  Future<List<Map<String, dynamic>>> myWalletJson() async {
+    final json = await _api.get('/wallet');
+    return json is List ? json.whereType<Map<String, dynamic>>().toList() : <Map<String, dynamic>>[];
+  }
+
+  Future<List<VoucherItem>> myWallet() async => (await myWalletJson()).map(VoucherItem.fromJson).toList();
+
+  // Chi tiet voucher da mua: chi nhanh ap dung, lan su dung, yeu cau hoan (chi chu so huu)
+  Future<WalletVoucherDetail> walletDetail(String voucherItemId) async =>
+      WalletVoucherDetail.fromJson(await _api.get('/wallet/$voucherItemId') as Map<String, dynamic>);
 }
 
 // FR-REDEEM-02/03: xin token QR dong + OTP cho mot voucher
@@ -99,8 +109,19 @@ class EngageService {
 
   Future<List<Favorite>> myFavorites() async => asList(await _api.get('/favorites/me'), Favorite.fromJson);
 
-  Future<void> createReview(String voucherItemId, int rating, {String? comment}) =>
-      _api.post('/reviews', body: {'voucherItemId': voucherItemId, 'rating': rating, 'comment': comment});
+  // F15: danh gia theo chien dich (may chu kiem tra da dung voucher - BR-10, moi chien dich 1 lan - DC-09)
+  Future<void> createReview(String campaignId, int rating, {String? comment}) => _api.post('/reviews', body: {
+        'campaignId': campaignId,
+        'rating': rating,
+        if (comment != null && comment.isNotEmpty) 'comment': comment,
+      });
+
+  // Danh gia cong khai + diem trung binh (Guest cung xem duoc)
+  Future<ReviewPage> campaignReviews(String campaignId, {int page = 1}) async =>
+      ReviewPage.fromJson(await _api.get('/campaigns/$campaignId/reviews', query: {'page': page}));
+
+  Future<ReviewEligibility> reviewEligibility(String campaignId) async => ReviewEligibility.fromJson(
+      await _api.get('/campaigns/$campaignId/reviews/eligibility') as Map<String, dynamic>);
 
   // F16: thong bao theo trang (20 / trang), kem so chua doc
   Future<NotificationPage> myNotifications({int page = 1}) async =>

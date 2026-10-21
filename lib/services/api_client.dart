@@ -2,12 +2,17 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
-// Loi tra ve tu API, message da duoc chuan hoa de hien thi cho nguoi dung (NFR-USA-02)
+// Loi tra ve tu API, message da duoc chuan hoa de hien thi cho nguoi dung (NFR-USA-02).
+// reason / details: ma ly do + du lieu kem theo cua loi nghiep vu (vd. VOUCHER_USED, TOKEN_RATE_LIMITED).
 class ApiException implements Exception {
-  const ApiException(this.message, {this.statusCode});
+  const ApiException(this.message, {this.statusCode, this.reason, this.details, this.isNetworkError = false});
 
   final String message;
   final int? statusCode;
+  final String? reason;
+  final Map<String, dynamic>? details;
+  // Khong goi duoc may chu (mat mang / may chu tat): vi dung du lieu da luu (NFR-MOB-12)
+  final bool isNetworkError;
 
   @override
   String toString() => message;
@@ -58,7 +63,7 @@ class ApiClient {
     try {
       response = await http.Response.fromStream(await _http.send(request));
     } catch (_) {
-      throw const ApiException('Không kết nối được máy chủ. Vui lòng kiểm tra mạng và thử lại.');
+      throw const ApiException('Không kết nối được máy chủ. Vui lòng kiểm tra mạng và thử lại.', isNetworkError: true);
     }
 
     if (response.statusCode == 401 && authenticated && retry && onUnauthorized != null) {
@@ -69,8 +74,13 @@ class ApiClient {
 
     final decoded = response.bodyBytes.isEmpty ? null : _tryDecode(utf8.decode(response.bodyBytes, allowMalformed: true));
     if (response.statusCode >= 400) {
-      throw ApiException(_messageOf(decoded) ?? 'Đã có lỗi xảy ra, vui lòng thử lại.',
-          statusCode: response.statusCode);
+      final error = decoded is Map && decoded['error'] is Map ? decoded['error'] as Map : null;
+      throw ApiException(
+        _messageOf(decoded) ?? 'Đã có lỗi xảy ra, vui lòng thử lại.',
+        statusCode: response.statusCode,
+        reason: error?['reason'] as String?,
+        details: error?['details'] is Map ? Map<String, dynamic>.from(error!['details'] as Map) : null,
+      );
     }
     return unwrap(decoded);
   }

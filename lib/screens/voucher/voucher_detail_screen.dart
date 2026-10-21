@@ -9,6 +9,7 @@ import '../../theme/app_theme.dart';
 import '../../utils/distance.dart';
 import '../../utils/format.dart';
 import '../../widgets/common.dart';
+import '../engage/campaign_reviews_section.dart';
 
 // FR-SEARCH-07: chi tiet voucher - gia, gia tri, dieu kien, han dung, chi nhanh ap dung, so luong con lai
 class VoucherDetailScreen extends StatefulWidget {
@@ -126,6 +127,8 @@ class _Detail extends StatelessWidget {
                   ),
                 ),
               ],
+              const SizedBox(height: AppSpacing.sm),
+              CampaignReviewsSection(campaignId: c.id, campaignTitle: c.title),
             ],
           ),
         ),

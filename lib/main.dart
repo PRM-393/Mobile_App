@@ -14,6 +14,7 @@ import 'services/notification_service.dart';
 import 'services/preferences_service.dart';
 import 'services/token_storage.dart';
 import 'services/voucher_services.dart';
+import 'services/wallet_cache.dart';
 import 'theme/app_theme.dart';
 
 // Diem vao app khach hang: khoi tao service, khoi phuc phien dang nhap, dang ky Provider (Module 5)
@@ -31,6 +32,8 @@ Future<void> main() async {
   final engageService = EngageService(api);
   // F16: thong bao may chu, hien thanh thong bao cuc bo khi app dang mo
   final notificationProvider = NotificationProvider(engageService, local: notifications, preferences: preferences);
+  // F10: vi luu SQLite de xem khi mat mang (NFR-MOB-12)
+  final walletProvider = WalletProvider(orderService, cache: SqliteWalletCache());
 
   // Dang nhap: bat dau kiem tra thong bao; dang xuat: dung va xoa du lieu cua tai khoan cu
   var wasLoggedIn = auth.isLoggedIn;
@@ -40,6 +43,7 @@ Future<void> main() async {
     if (wasLoggedIn && !auth.isLoggedIn) {
       notificationProvider.stopPolling();
       preferences.clearUserData();
+      walletProvider.clear();
     }
     wasLoggedIn = auth.isLoggedIn;
   });
@@ -58,7 +62,7 @@ Future<void> main() async {
         ChangeNotifierProvider.value(value: auth),
         ChangeNotifierProvider(create: (_) => MainTabController()),
         ChangeNotifierProvider(create: (_) => SearchProvider(searchService, preferences: preferences)),
-        ChangeNotifierProvider(create: (_) => WalletProvider(orderService)),
+        ChangeNotifierProvider.value(value: walletProvider),
         ChangeNotifierProvider.value(value: notificationProvider),
       ],
       child: const VoucherApp(),
