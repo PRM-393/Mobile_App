@@ -41,6 +41,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       } catch (e) {
         if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
       }
+    } else if (n.data['refundId'] != null) {
+      await AppRoutes.push(context, AppRoutes.refundList);
     } else if (n.data['voucherItemId'] != null) {
       context.read<MainTabController>().go(MainTabController.wallet);
       Navigator.popUntil(context, (route) => route.isFirst);
