@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'config/env.dart';
 import 'providers/auth_provider.dart';
 import 'providers/main_tab_controller.dart';
+import 'providers/notification_provider.dart';
 import 'providers/search_provider.dart';
 import 'providers/wallet_provider.dart';
 import 'routes.dart';
@@ -25,15 +26,23 @@ Future<void> main() async {
   final preferences = await PreferencesService.create();
   await Future.wait([auth.hydrate(), notifications.init()]);
 
-  // Dang xuat: xoa tu khoa gan day va anh chup vi cua tai khoan cu
-  var wasLoggedIn = auth.isLoggedIn;
-  auth.addListener(() {
-    if (wasLoggedIn && !auth.isLoggedIn) preferences.clearUserData();
-    wasLoggedIn = auth.isLoggedIn;
-  });
-
   final searchService = SearchService(api);
   final orderService = OrderService(api);
+  final engageService = EngageService(api);
+  // F16: thong bao may chu, hien thanh thong bao cuc bo khi app dang mo
+  final notificationProvider = NotificationProvider(engageService, local: notifications, preferences: preferences);
+
+  // Dang nhap: bat dau kiem tra thong bao; dang xuat: dung va xoa du lieu cua tai khoan cu
+  var wasLoggedIn = auth.isLoggedIn;
+  if (wasLoggedIn) notificationProvider.startPolling();
+  auth.addListener(() {
+    if (!wasLoggedIn && auth.isLoggedIn) notificationProvider.startPolling();
+    if (wasLoggedIn && !auth.isLoggedIn) {
+      notificationProvider.stopPolling();
+      preferences.clearUserData();
+    }
+    wasLoggedIn = auth.isLoggedIn;
+  });
 
   runApp(
     MultiProvider(
@@ -45,13 +54,12 @@ Future<void> main() async {
         Provider.value(value: orderService),
         Provider(create: (_) => RedeemService(api)),
         Provider(create: (_) => RefundService(api)),
-        Provider(create: (_) => EngageService(api)),
+        Provider.value(value: engageService),
         ChangeNotifierProvider.value(value: auth),
         ChangeNotifierProvider(create: (_) => MainTabController()),
         ChangeNotifierProvider(create: (_) => SearchProvider(searchService, preferences: preferences)),
-        ChangeNotifierProvider(
-          create: (_) => WalletProvider(orderService, preferences: preferences, notifications: notifications),
-        ),
+        ChangeNotifierProvider(create: (_) => WalletProvider(orderService)),
+        ChangeNotifierProvider.value(value: notificationProvider),
       ],
       child: const VoucherApp(),
     ),

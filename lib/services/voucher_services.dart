@@ -50,6 +50,19 @@ class OrderService {
 
   Future<List<Order>> myOrders() async => asList(await _api.get('/orders/me'), Order.fromJson);
 
+  // FR-ORDER-05: hoi trang thai don tu may chu
+  Future<Order> getOrder(String id) async => Order.fromJson(await _api.get('/orders/$id') as Map<String, dynamic>);
+
+  // FR-ORDER-12: thanh toan lai trong thoi gian giu cho (may chu tra lai dung link cu)
+  Future<CreateOrderResult> retryPayment(String id) async =>
+      CreateOrderResult.fromJson(await _api.post('/orders/$id/pay') as Map<String, dynamic>);
+
+  // Thanh toan thu khi may chu bat PAYMENT_SIMULATOR (demo do an, chua co khoa payOS)
+  Future<Order> simulatePayment(String id, {bool success = true}) async {
+    final json = await _api.post('/orders/$id/simulate-payment', body: {'success': success}) as Map<String, dynamic>;
+    return Order.fromJson(json['order'] as Map<String, dynamic>);
+  }
+
   Future<List<VoucherItem>> myWallet() async => asList(await _api.get('/wallet'), VoucherItem.fromJson);
 }
 
@@ -89,8 +102,19 @@ class EngageService {
   Future<void> createReview(String voucherItemId, int rating, {String? comment}) =>
       _api.post('/reviews', body: {'voucherItemId': voucherItemId, 'rating': rating, 'comment': comment});
 
-  Future<List<AppNotification>> myNotifications() async =>
-      asList(await _api.get('/notifications/me'), AppNotification.fromJson);
+  // F16: thong bao theo trang (20 / trang), kem so chua doc
+  Future<NotificationPage> myNotifications({int page = 1}) async =>
+      NotificationPage.fromJson(await _api.get('/notifications/me', query: {'page': page}));
+
+  Future<void> markNotificationRead(String id) => _api.patch('/notifications/$id/read');
+
+  Future<void> markAllNotificationsRead() => _api.patch('/notifications/read-all');
+
+  Future<List<NotificationSetting>> notificationSettings() async =>
+      asList(await _api.get('/notifications/settings'), NotificationSetting.fromJson);
+
+  Future<List<NotificationSetting>> updateNotificationSetting(String type, bool enabled) async => asList(
+      await _api.put('/notifications/settings', body: {'type': type, 'enabled': enabled}), NotificationSetting.fromJson);
 
   Future<void> registerDeviceToken(String token, String platform) =>
       _api.post('/notifications/device-token', body: {'token': token, 'platform': platform});
