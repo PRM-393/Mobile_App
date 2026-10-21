@@ -22,10 +22,10 @@ const voucherStatusLabels = {
 const refundStatusLabels = {
   'REQUESTED': 'Đã gửi yêu cầu',
   'PROCESSING': 'Đang xử lý',
-  'MANUAL_PENDING': 'Chờ quản trị viên hoàn tay',
+  'MANUAL_PENDING': 'Chờ quản trị viên hoàn tiền',
   'COMPLETED': 'Hoàn tiền thành công',
-  'REJECTED': 'Bị từ chối',
-  'FAILED': 'Hoàn tiền thất bại',
+  'REJECTED': 'Không đủ điều kiện',
+  'FAILED': 'Hoàn tiền không thành công',
 };
 
 // Don hang (FR-ORDER-01..13). Trang thai chi lay tu may chu, app khong tu ket luan (FR-ORDER-05).
@@ -89,7 +89,24 @@ class CreateOrderResult {
       );
 }
 
-// Voucher cu the cua khach trong vi (GET /wallet)
+// Dieu kien hoan tien do may chu tinh theo BR-05 (FR-REFUND-04/07): app khoa nut va hien ly do
+class RefundEligibility {
+  const RefundEligibility({required this.canRefund, this.reasonCode, this.reason, this.refundableUntil});
+
+  final bool canRefund;
+  final String? reasonCode;
+  final String? reason;
+  final DateTime? refundableUntil;
+
+  factory RefundEligibility.fromJson(Map<String, dynamic> json) => RefundEligibility(
+        canRefund: json['canRefund'] == true,
+        reasonCode: json['reasonCode'] as String?,
+        reason: json['reason'] as String?,
+        refundableUntil: asDateOrNull(json['refundableUntil']),
+      );
+}
+
+// Voucher cu the cua khach trong vi (GET /wallet). JSON goc duoc luu cache SQLite de xem khi mat mang (NFR-MOB-12).
 class VoucherItem {
   const VoucherItem({
     required this.id,
@@ -100,7 +117,11 @@ class VoucherItem {
     required this.issuedAt,
     required this.expireAt,
     this.usedAt,
+    this.refundableUntil,
     this.campaign,
+    this.refund,
+    this.canReview = false,
+    this.hasReviewed = false,
   });
 
   final String id;
@@ -111,24 +132,112 @@ class VoucherItem {
   final DateTime issuedAt;
   final DateTime? usedAt;
   final DateTime expireAt;
+  final DateTime? refundableUntil;
   final VoucherCampaign? campaign;
+  final RefundEligibility? refund;
+  final bool canReview;
+  final bool hasReviewed;
 
-  // Het han xet theo expireAt so voi hien tai, khong cho tac vu nen cap nhat trang thai
-  String get effectiveStatus =>
-      status == 'ACTIVE' && expireAt.isBefore(DateTime.now()) ? 'EXPIRED' : status;
+  // Het han xet theo expireAt so voi hien tai, khong cho tac vu nen cap nhat trang thai.
+  // REFUND_PENDING giu nguyen (dang cho hoan). Cung quy tac voi may chu nen du lieu cache van chia tab dung.
+  String effectiveStatusAt(DateTime now) => status == 'ACTIVE' && !expireAt.isAfter(now) ? 'EXPIRED' : status;
 
-  factory VoucherItem.fromJson(Map<String, dynamic> json) => VoucherItem(
-        id: json['id'] as String,
-        orderId: json['orderId'] as String? ?? '',
-        campaignId: json['campaignId'] as String? ?? '',
-        code: json['code'] as String? ?? '',
-        status: json['status'] as String? ?? 'ACTIVE',
-        issuedAt: asDate(json['issuedAt']),
-        usedAt: asDateOrNull(json['usedAt']),
-        expireAt: asDate(json['expireAt']),
-        campaign: json['campaign'] is Map<String, dynamic>
-            ? VoucherCampaign.fromJson(json['campaign'] as Map<String, dynamic>)
+  String get effectiveStatus => effectiveStatusAt(DateTime.now());
+
+  // 4 tab cua vi: REFUND_PENDING nam o tab "Đang hiệu lực" voi nhan "Đang hoàn tiền"
+  String get tab => switch (effectiveStatus) {
+        'ACTIVE' || 'REFUND_PENDING' => 'ACTIVE',
+        'USED' => 'USED',
+        'REFUNDED' => 'REFUNDED',
+        _ => 'EXPIRED',
+      };
+
+  String get statusLabel => voucherStatusLabels[effectiveStatus] ?? effectiveStatus;
+
+  // Chi voucher dang hieu luc (khong dang cho hoan) moi sinh ma su dung duoc
+  bool get canRedeem => effectiveStatus == 'ACTIVE';
+
+  factory VoucherItem.fromJson(Map<String, dynamic> json) {
+    final review = json['review'] is Map ? json['review'] as Map : const {};
+    return VoucherItem(
+      id: json['id'] as String,
+      orderId: json['orderId'] as String? ?? '',
+      campaignId: json['campaignId'] as String? ?? '',
+      code: json['code'] as String? ?? '',
+      status: json['status'] as String? ?? 'ACTIVE',
+      issuedAt: asDate(json['issuedAt']),
+      usedAt: asDateOrNull(json['usedAt']),
+      expireAt: asDate(json['expireAt']),
+      refundableUntil: asDateOrNull(json['refundableUntil']),
+      campaign: json['campaign'] is Map<String, dynamic>
+          ? VoucherCampaign.fromJson(json['campaign'] as Map<String, dynamic>)
+          : null,
+      refund: json['refund'] is Map<String, dynamic>
+          ? RefundEligibility.fromJson(json['refund'] as Map<String, dynamic>)
+          : null,
+      canReview: review['canReview'] == true,
+      hasReviewed: review['hasReviewed'] == true,
+    );
+  }
+}
+
+// Chi nhanh ap dung cua voucher da mua
+class WalletStore {
+  const WalletStore({required this.id, required this.name, required this.address, this.phone, this.openingHours});
+
+  final String id;
+  final String name;
+  final String address;
+  final String? phone;
+  final String? openingHours;
+
+  factory WalletStore.fromJson(Map<String, dynamic> json) => WalletStore(
+        id: json['id'] as String? ?? '',
+        name: json['name'] as String? ?? '',
+        address: json['address'] as String? ?? '',
+        phone: json['phone'] as String?,
+        openingHours: json['openingHours'] as String?,
+      );
+}
+
+// Lan su dung voucher (FR-REDEEM-07): luc nao, o chi nhanh nao
+class Redemption {
+  const Redemption({required this.redeemedAt, this.storeName, this.storeAddress, this.method});
+
+  final DateTime redeemedAt;
+  final String? storeName;
+  final String? storeAddress;
+  final String? method;
+
+  factory Redemption.fromJson(Map<String, dynamic> json) => Redemption(
+        redeemedAt: asDate(json['redeemedAt']),
+        storeName: json['storeName'] as String?,
+        storeAddress: json['storeAddress'] as String?,
+        method: json['method'] as String?,
+      );
+}
+
+// Chi tiet voucher da mua (GET /wallet/:id): chi nhanh ap dung, lan su dung, cac yeu cau hoan
+class WalletVoucherDetail {
+  const WalletVoucherDetail({
+    required this.voucher,
+    this.stores = const [],
+    this.redemption,
+    this.refundRequests = const [],
+  });
+
+  final VoucherItem voucher;
+  final List<WalletStore> stores;
+  final Redemption? redemption;
+  final List<RefundRequest> refundRequests;
+
+  factory WalletVoucherDetail.fromJson(Map<String, dynamic> json) => WalletVoucherDetail(
+        voucher: VoucherItem.fromJson(json),
+        stores: asList(json['stores'], WalletStore.fromJson),
+        redemption: json['redemption'] is Map<String, dynamic>
+            ? Redemption.fromJson(json['redemption'] as Map<String, dynamic>)
             : null,
+        refundRequests: asList(json['refundRequests'], RefundRequest.fromJson),
       );
 }
 
@@ -149,6 +258,7 @@ class RedeemToken {
       );
 }
 
+// Yeu cau hoan tien (FR-REFUND-07): trang thai + ly do, so tien, ma giao dich hoan
 class RefundRequest {
   const RefundRequest({
     required this.id,
@@ -157,6 +267,11 @@ class RefundRequest {
     required this.createdAt,
     this.reason,
     this.rejectReason,
+    this.decidedAt,
+    this.amount,
+    this.campaignTitle,
+    this.voucherCode,
+    this.gatewayRefundId,
   });
 
   final String id;
@@ -165,13 +280,31 @@ class RefundRequest {
   final String? reason;
   final String? rejectReason;
   final DateTime createdAt;
+  final DateTime? decidedAt;
+  final double? amount;
+  final String? campaignTitle;
+  final String? voucherCode;
+  final String? gatewayRefundId;
 
-  factory RefundRequest.fromJson(Map<String, dynamic> json) => RefundRequest(
-        id: json['id'] as String,
-        voucherItemId: json['voucherItemId'] as String? ?? '',
-        status: json['status'] as String? ?? 'REQUESTED',
-        reason: json['reason'] as String?,
-        rejectReason: json['rejectReason'] as String?,
-        createdAt: asDate(json['createdAt']),
-      );
+  String get statusLabel => refundStatusLabels[status] ?? status;
+
+  // Chua co ket qua cuoi cung
+  bool get isOpen => const {'REQUESTED', 'PROCESSING', 'MANUAL_PENDING'}.contains(status);
+
+  factory RefundRequest.fromJson(Map<String, dynamic> json) {
+    final paymentRefund = json['paymentRefund'] is Map ? json['paymentRefund'] as Map : null;
+    return RefundRequest(
+      id: json['id'] as String,
+      voucherItemId: json['voucherItemId'] as String? ?? '',
+      status: json['status'] as String? ?? 'REQUESTED',
+      reason: json['reason'] as String?,
+      rejectReason: json['rejectReason'] as String?,
+      createdAt: asDate(json['createdAt']),
+      decidedAt: asDateOrNull(json['decidedAt']),
+      amount: asDoubleOrNull(json['amount']),
+      campaignTitle: json['campaignTitle'] as String?,
+      voucherCode: json['voucherCode'] as String?,
+      gatewayRefundId: (paymentRefund?['gatewayRefundId'] ?? json['gatewayRefundId']) as String?,
+    );
+  }
 }

@@ -6,11 +6,22 @@ import '../../services/voucher_services.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/common.dart';
 
-// FR-ENGAGE-02/03: danh gia 1-5 sao, chi cho voucher da su dung (BR-10)
-class ReviewScreen extends StatefulWidget {
-  const ReviewScreen({super.key, required this.voucher});
+// Tham so mo man danh gia: danh gia theo chien dich (moi chien dich 1 lan - DC-09)
+class ReviewArgs {
+  const ReviewArgs({required this.campaignId, required this.campaignTitle});
 
-  final VoucherItem voucher;
+  factory ReviewArgs.fromVoucher(VoucherItem v) =>
+      ReviewArgs(campaignId: v.campaignId, campaignTitle: v.campaign?.title ?? 'Voucher');
+
+  final String campaignId;
+  final String campaignTitle;
+}
+
+// FR-ENGAGE-02/03: danh gia 1-5 sao + binh luan; may chu chi nhan khi khach da dung voucher cua chien dich (BR-10)
+class ReviewScreen extends StatefulWidget {
+  const ReviewScreen({super.key, required this.args});
+
+  final ReviewArgs args;
 
   @override
   State<ReviewScreen> createState() => _ReviewScreenState();
@@ -35,12 +46,12 @@ class _ReviewScreenState extends State<ReviewScreen> {
     });
     try {
       final comment = _commentController.text.trim();
-      await context.read<EngageService>().createReview(widget.voucher.id, _rating, comment: comment.isEmpty ? null : comment);
+      await context.read<EngageService>().createReview(widget.args.campaignId, _rating, comment: comment.isEmpty ? null : comment);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Cảm ơn bạn đã đánh giá!')));
-      Navigator.pop(context);
+      Navigator.pop(context, true);
     } catch (e) {
-      setState(() => _error = e.toString());
+      if (mounted) setState(() => _error = e.toString());
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -52,20 +63,24 @@ class _ReviewScreenState extends State<ReviewScreen> {
         body: ListView(
           padding: const EdgeInsets.all(AppSpacing.md),
           children: [
-            Text(widget.voucher.campaign?.title ?? 'Voucher', style: const TextStyle(fontWeight: FontWeight.w700)),
+            Text(widget.args.campaignTitle, style: const TextStyle(fontWeight: FontWeight.w700)),
             const SizedBox(height: AppSpacing.md),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 for (var n = 1; n <= 5; n++)
                   IconButton(
+                    key: Key('star-$n'),
                     iconSize: 40,
                     onPressed: () => setState(() => _rating = n),
                     icon: Icon(n <= _rating ? Icons.star : Icons.star_border, color: AppColors.secondary),
                   ),
               ],
             ),
+            Text('$_rating / 5 sao', textAlign: TextAlign.center, style: const TextStyle(color: AppColors.textSecondary)),
+            const SizedBox(height: AppSpacing.sm),
             TextField(
+              key: const Key('review-comment'),
               controller: _commentController,
               maxLines: 4,
               maxLength: 1000,
