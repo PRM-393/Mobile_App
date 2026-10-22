@@ -86,7 +86,10 @@ ThemeData buildAppTheme() {
       side: const BorderSide(color: AppColors.border),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(99)),
       selectedColor: AppColors.primarySoft,
-      labelStyle: const TextStyle(fontWeight: FontWeight.w600),
+      // Mau chu ro rang ca khi chua chon (mac dinh bi trang tren nen sang)
+      labelStyle: const TextStyle(fontWeight: FontWeight.w600, color: AppColors.textPrimary),
+      secondaryLabelStyle: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.primaryDark),
+      checkmarkColor: AppColors.primaryDark,
     ),
   );
 }
