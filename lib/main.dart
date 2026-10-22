@@ -9,6 +9,7 @@ import 'providers/search_provider.dart';
 import 'providers/wallet_provider.dart';
 import 'routes.dart';
 import 'services/api_client.dart';
+import 'services/profile_service.dart';
 import 'services/auth_service.dart';
 import 'services/notification_service.dart';
 import 'services/preferences_service.dart';
@@ -63,6 +64,7 @@ Future<void> main() async {
         Provider(create: (_) => RedeemService(api)),
         Provider(create: (_) => RefundService(api)),
         Provider.value(value: engageService),
+        Provider(create: (_) => ProfileService(api)),
         ChangeNotifierProvider.value(value: auth),
         ChangeNotifierProvider(create: (_) => MainTabController()),
         ChangeNotifierProvider(create: (_) => SearchProvider(searchService, preferences: preferences)),

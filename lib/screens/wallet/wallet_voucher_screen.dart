@@ -244,7 +244,7 @@ class _RefundSection extends StatelessWidget {
           if (deadline != null)
             Text('Hạn chót yêu cầu hoàn tiền: ${formatDateTime(deadline)}', key: const Key('refund-deadline')),
           const Text(
-            'Áp dụng cho voucher chưa sử dụng, trong 7 ngày kể từ khi mua và còn ít nhất 3 ngày trước hạn sử dụng (BR-05).',
+            'Áp dụng cho voucher chưa sử dụng, trong 7 ngày kể từ khi mua và còn ít nhất 3 ngày trước hạn sử dụng.',
             style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
           ),
           const SizedBox(height: AppSpacing.sm),
