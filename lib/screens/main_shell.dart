@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/main_tab_controller.dart';
 import '../routes.dart';
-import '../theme/app_theme.dart';
+import '../widgets/common.dart';
 import 'home/home_screen.dart';
 import 'orders/order_history_screen.dart';
 import 'profile/profile_screen.dart';
@@ -74,28 +74,11 @@ class _LoginRequired extends StatelessWidget {
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(title: Text(title)),
     body: Center(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.xl),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(
-              Icons.lock_outline,
-              size: 48,
-              color: AppColors.textSecondary,
-            ),
-            const SizedBox(height: AppSpacing.md),
-            const Text(
-              'Vui lòng đăng nhập để sử dụng chức năng này.',
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: AppSpacing.md),
-            FilledButton(
-              onPressed: () => Navigator.pushNamed(context, AppRoutes.login),
-              child: const Text('Đăng nhập'),
-            ),
-          ],
-        ),
+      child: EmptyState(
+        'Vui lòng đăng nhập để sử dụng chức năng này.',
+        icon: Icons.lock_outline,
+        actionLabel: 'Đăng nhập',
+        onAction: () => Navigator.pushNamed(context, AppRoutes.login),
       ),
     ),
   );

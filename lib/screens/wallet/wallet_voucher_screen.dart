@@ -83,7 +83,7 @@ class _WalletVoucherScreenState extends State<WalletVoucherScreen> {
               OfflineBanner(cachedAt: context.read<WalletProvider>().cachedAt),
               const SizedBox(height: AppSpacing.sm),
             ] else if (_error != null) ...[
-              Text(_error!, style: const TextStyle(color: AppColors.danger)),
+              InfoBanner(_error!, icon: Icons.error_outline, tone: StatusTone.danger),
               TextButton(onPressed: _load, child: const Text('Thử lại')),
             ],
             _Header(voucher: v),
@@ -158,7 +158,6 @@ class _Header extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = voucher.campaign;
-    const muted = TextStyle(color: AppColors.textSecondary);
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.md),
@@ -168,17 +167,34 @@ class _Header extends StatelessWidget {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                BrandAvatar(imageUrl: c?.image, size: 56),
+                const SizedBox(width: AppSpacing.sm + 4),
                 Expanded(
-                  child: Text(c?.title ?? 'Voucher', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        c?.title ?? 'Voucher',
+                        style: const TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w900,
+                          height: 1.3,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      StatusChip(voucher.effectiveStatus),
+                    ],
+                  ),
                 ),
-                StatusChip(voucher.effectiveStatus),
               ],
             ),
-            const SizedBox(height: AppSpacing.sm),
-            if (c != null) Text('Giá trị: ${formatVnd(c.faceValue)}', style: muted),
-            Text('Mã tra cứu: ${voucher.code}', style: muted),
-            Text('Ngày mua: ${formatDateTime(voucher.issuedAt)}', style: muted),
-            Text('Hạn sử dụng: ${formatDateTime(voucher.expireAt)}', style: muted),
+            const SizedBox(height: AppSpacing.md),
+            const Divider(),
+            const SizedBox(height: AppSpacing.xs),
+            if (c != null) DetailRow('Giá trị', formatVnd(c.faceValue)),
+            DetailRow('Mã tra cứu', voucher.code),
+            DetailRow('Ngày mua', formatDateTime(voucher.issuedAt)),
+            DetailRow('Hạn sử dụng', formatDateTime(voucher.expireAt)),
           ],
         ),
       ),
@@ -202,16 +218,26 @@ class _UseSection extends StatelessWidget {
         'REFUNDED' => 'Voucher đã được hoàn tiền.',
         _ => 'Voucher đã hết hạn sử dụng.',
       };
-      return Text(reason, key: const Key('use-disabled-reason'), style: const TextStyle(color: AppColors.textSecondary));
-    }
-    if (offline) {
-      return const Text(
-        'Cần kết nối mạng để tạo mã QR / OTP sử dụng voucher.',
-        key: Key('use-offline-reason'),
-        style: TextStyle(color: AppColors.danger),
+      return InfoBanner(
+        reason,
+        key: const Key('use-disabled-reason'),
+        icon: Icons.info_outline,
+        tone: StatusTone.neutral,
       );
     }
-    return PrimaryButton(label: 'Sử dụng ngay', onPressed: onUse);
+    if (offline) {
+      return const InfoBanner(
+        'Cần kết nối mạng để tạo mã QR / OTP sử dụng voucher.',
+        key: Key('use-offline-reason'),
+        icon: Icons.cloud_off_outlined,
+        tone: StatusTone.danger,
+      );
+    }
+    return PrimaryButton(
+      label: 'Sử dụng ngay',
+      icon: Icons.qr_code_2_rounded,
+      onPressed: onUse,
+    );
   }
 }
 
@@ -238,11 +264,17 @@ class _RefundSection extends StatelessWidget {
     final canRefund = eligibility?.canRefund ?? false;
     return SectionCard(
       title: 'Hoàn tiền',
+      icon: Icons.currency_exchange,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (deadline != null)
-            Text('Hạn chót yêu cầu hoàn tiền: ${formatDateTime(deadline)}', key: const Key('refund-deadline')),
+            DetailRow(
+              key: const Key('refund-deadline'),
+              'Hạn chót yêu cầu hoàn tiền',
+              formatDateTime(deadline),
+              valueColor: AppColors.danger,
+            ),
           const Text(
             'Áp dụng cho voucher chưa sử dụng, trong 7 ngày kể từ khi mua và còn ít nhất 3 ngày trước hạn sử dụng.',
             style: TextStyle(color: AppColors.textSecondary, fontSize: 12),

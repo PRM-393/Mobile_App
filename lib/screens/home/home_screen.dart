@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../models/campaign.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/main_tab_controller.dart';
 import '../../providers/notification_provider.dart';
 import '../../routes.dart';
@@ -59,20 +60,21 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
-      title: const Column(
+      titleSpacing: AppSpacing.md,
+      title: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'vouch.',
-            style: TextStyle(
-              fontSize: 25,
+            'Xin chào, ${_greetingName(context)}',
+            style: const TextStyle(
+              fontSize: 19,
               fontWeight: FontWeight.w900,
-              color: AppColors.primary,
+              color: AppColors.textPrimary,
             ),
           ),
-          Text(
-            'Ưu đãi tốt. Kết nối bền.',
-            style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
+          const Text(
+            'Ưu đãi đa thương hiệu quanh bạn',
+            style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
           ),
         ],
       ),
@@ -97,23 +99,42 @@ class _HomeScreenState extends State<HomeScreen> {
       child: ListView(
         padding: const EdgeInsets.all(AppSpacing.md),
         children: [
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [AppColors.primaryDark, AppColors.primary],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
+          // O tim kiem gia: cham de nhay sang tab Tim kiem
+          InkWell(
+            borderRadius: BorderRadius.circular(AppRadius.control),
+            onTap: () => context.read<MainTabController>().go(1),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(AppRadius.control),
+                border: Border.all(color: AppColors.border),
               ),
-              borderRadius: BorderRadius.circular(24),
-              boxShadow: const [
-                BoxShadow(
-                  color: Color(0x33045D50),
-                  blurRadius: 20,
-                  offset: Offset(0, 10),
-                ),
-              ],
+              child: const Row(
+                children: [
+                  Icon(Icons.search_rounded, color: AppColors.primary),
+                  SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'Tìm voucher, thương hiệu...',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(color: AppColors.textSecondary),
+                    ),
+                  ),
+                  Icon(
+                    Icons.tune_rounded,
+                    size: 20,
+                    color: AppColors.textSecondary,
+                  ),
+                ],
+              ),
             ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          // Banner khuyen mai
+          GradientHeaderCard(
+            padding: const EdgeInsets.all(20),
             child: Row(
               children: [
                 const Expanded(
@@ -121,11 +142,12 @@ class _HomeScreenState extends State<HomeScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Chạm để săn deal',
+                        'Ưu đãi từ các thương hiệu',
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 22,
                           fontWeight: FontWeight.w900,
+                          height: 1.2,
                         ),
                       ),
                       SizedBox(height: 6),
@@ -133,6 +155,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         'Hàng trăm ưu đãi đang chờ bạn khám phá hôm nay.',
                         style: TextStyle(
                           color: Color(0xFFD9FFF3),
+                          fontSize: 13,
                           height: 1.35,
                         ),
                       ),
@@ -157,37 +180,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
           const SizedBox(height: AppSpacing.lg),
-          InkWell(
-            borderRadius: BorderRadius.circular(16),
-            onTap: () => context.read<MainTabController>().go(1),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.border),
-              ),
-              child: const Row(
-                children: [
-                  Icon(Icons.search_rounded, color: AppColors.primary),
-                  SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      'Tìm voucher hoặc thương hiệu',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(color: AppColors.textSecondary),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: AppSpacing.lg),
-          const Text(
-            'Khám phá theo danh mục',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
-          ),
+          const SectionHeader('Khám phá theo danh mục'),
           const SizedBox(height: AppSpacing.sm),
           FutureBuilder<List<Category>>(
             future: _categories,
@@ -229,30 +222,22 @@ class _HomeScreenState extends State<HomeScreen> {
               );
             },
           ),
-          const SizedBox(height: AppSpacing.md),
-          Row(
+          const SizedBox(height: AppSpacing.lg),
+          const SectionHeader(
+            'Ưu đãi nổi bật',
+            subtitle: 'Chọn cách sắp xếp bên dưới',
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Wrap(
             children: [
-              Expanded(
-                child: ChoiceChip(
-                  label: const FittedBox(child: Text('Voucher mới')),
-                  selected: _sort == 'newest',
-                  onSelected: (_) {
-                    _sort = 'newest';
-                    setState(_load);
-                  },
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: ChoiceChip(
-                  label: const FittedBox(child: Text('Bán chạy')),
-                  selected: _sort == 'best_seller',
-                  onSelected: (_) {
-                    _sort = 'best_seller';
-                    setState(_load);
-                  },
-                ),
-              ),
+              _chip('Voucher mới', _sort == 'newest', () {
+                _sort = 'newest';
+                setState(_load);
+              }),
+              _chip('Bán chạy', _sort == 'best_seller', () {
+                _sort = 'best_seller';
+                setState(_load);
+              }),
             ],
           ),
           const SizedBox(height: AppSpacing.md),
@@ -269,24 +254,46 @@ class _HomeScreenState extends State<HomeScreen> {
                 );
               }
               final items = snap.data?.items ?? const [];
-              if (items.isEmpty) return const EmptyState('Chưa có voucher nào');
-              return SizedBox(
-                height: 310,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: items.length,
-                  separatorBuilder: (_, _) =>
-                      const SizedBox(width: AppSpacing.md),
-                  itemBuilder: (context, i) => VoucherCard(
-                    width: 180,
-                    campaign: items[i],
-                    onTap: () => AppRoutes.push(
-                      context,
-                      AppRoutes.voucherDetail,
-                      arguments: items[i].id,
+              if (items.isEmpty) {
+                return const EmptyState(
+                  'Chưa có voucher nào trong danh mục này',
+                  icon: Icons.local_offer_outlined,
+                );
+              }
+              // Hang the ngang cho nhom dau, phan con lai xem dang danh sach doc
+              final highlight = items.take(5).toList();
+              final rest = items.skip(5).toList();
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  SizedBox(
+                    height: 290,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: highlight.length,
+                      separatorBuilder: (_, _) =>
+                          const SizedBox(width: AppSpacing.md),
+                      itemBuilder: (context, i) => VoucherCard(
+                        width: 190,
+                        campaign: highlight[i],
+                        onTap: () => _openDetail(highlight[i].id),
+                      ),
                     ),
                   ),
-                ),
+                  if (rest.isNotEmpty) ...[
+                    const SizedBox(height: AppSpacing.lg),
+                    const SectionHeader('Tất cả ưu đãi'),
+                    const SizedBox(height: AppSpacing.sm),
+                    for (final item in rest)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: AppSpacing.sm + 4),
+                        child: VoucherCard(
+                          campaign: item,
+                          onTap: () => _openDetail(item.id),
+                        ),
+                      ),
+                  ],
+                ],
               );
             },
           ),
@@ -295,11 +302,25 @@ class _HomeScreenState extends State<HomeScreen> {
     ),
   );
 
+  void _openDetail(String id) =>
+      AppRoutes.push(context, AppRoutes.voucherDetail, arguments: id);
+
+  // Ten hien o loi chao: ho ten, phan truoc @ cua email, hoac "Khách" khi chua dang nhap
+  String _greetingName(BuildContext context) {
+    // Doc dang nullable: man nay cung chay trong test khong dang ky AuthProvider
+    final user = context.watch<AuthProvider?>()?.user;
+    if (user == null) return 'Khách';
+    final name = user.fullName?.trim();
+    if (name != null && name.isNotEmpty) return name;
+    return user.email.split('@').first;
+  }
+
   Widget _chip(String label, bool selected, VoidCallback onTap) => Padding(
     padding: const EdgeInsets.only(right: AppSpacing.sm),
     child: ChoiceChip(
       label: Text(label),
       selected: selected,
+      showCheckmark: false,
       onSelected: (_) => onTap(),
     ),
   );

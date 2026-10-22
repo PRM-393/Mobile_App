@@ -7,6 +7,7 @@ import '../../routes.dart';
 import '../../services/voucher_services.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/format.dart';
+import '../../widgets/common.dart';
 import 'review_screen.dart';
 
 // F15 (FR-ENGAGE-02..04): danh gia cua chien dich trong man chi tiet voucher - diem trung binh, danh sach,
@@ -105,17 +106,41 @@ class _CampaignReviewsSectionState extends State<CampaignReviewsSection> {
           children: [
             Row(
               children: [
+                const Icon(Icons.star_outline_rounded, size: 18, color: AppColors.primary),
+                const SizedBox(width: AppSpacing.sm),
                 const Expanded(
-                  child: Text('Đánh giá', style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
-                ),
-                if (last?.avgRating != null) ...[
-                  const Icon(Icons.star, color: AppColors.secondary, size: 18),
-                  Text(
-                    ' ${last!.avgRating!.toStringAsFixed(1)} (${last.reviewCount})',
-                    key: const Key('review-average'),
-                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  child: Text(
+                    'Đánh giá',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 15,
+                      color: AppColors.textPrimary,
+                    ),
                   ),
-                ],
+                ),
+                if (last?.avgRating != null)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: AppColors.secondarySoft,
+                      borderRadius: BorderRadius.circular(AppRadius.pill),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.star_rounded, color: AppColors.secondary, size: 15),
+                        Text(
+                          ' ${last!.avgRating!.toStringAsFixed(1)} (${last.reviewCount})',
+                          key: const Key('review-average'),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w800,
+                            fontSize: 12,
+                            color: Color(0xFF9A5B00),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
               ],
             ),
             if (_eligibility?.canReview == true)
@@ -128,13 +153,20 @@ class _CampaignReviewsSectionState extends State<CampaignReviewsSection> {
                   label: const Text('Viết đánh giá'),
                 ),
               ),
-            if (_error != null) Text(_error!, style: const TextStyle(color: AppColors.danger)),
+            if (_error != null)
+              Padding(
+                padding: const EdgeInsets.only(top: AppSpacing.sm),
+                child: InfoBanner(_error!, icon: Icons.error_outline, tone: StatusTone.danger),
+              ),
             if (!_loading && _error == null && _items.isEmpty)
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: AppSpacing.sm),
                 child: Text('Chưa có đánh giá nào.', style: TextStyle(color: AppColors.textSecondary)),
               ),
-            for (final r in _items) _ReviewTile(review: r),
+            for (final (i, r) in _items.indexed) ...[
+              if (i > 0) const Divider(),
+              _ReviewTile(review: r),
+            ],
             if (_loading) const Padding(padding: EdgeInsets.all(AppSpacing.sm), child: LinearProgressIndicator()),
             if (!_loading && last != null && last.hasMore)
               TextButton(onPressed: _loadMore, child: const Text('Xem thêm đánh giá')),
@@ -158,14 +190,53 @@ class _ReviewTile extends StatelessWidget {
           children: [
             Row(
               children: [
-                for (var s = 1; s <= 5; s++)
-                  Icon(s <= review.rating ? Icons.star : Icons.star_border, color: AppColors.secondary, size: 16),
+                CircleAvatar(
+                  radius: 16,
+                  backgroundColor: AppColors.primarySoft,
+                  child: Text(
+                    review.reviewerName.isEmpty
+                        ? '?'
+                        : review.reviewerName.characters.first.toUpperCase(),
+                    style: const TextStyle(
+                      color: AppColors.primaryDark,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
                 const SizedBox(width: AppSpacing.sm),
-                Expanded(child: Text(review.reviewerName, style: const TextStyle(fontWeight: FontWeight.w600))),
-                Text(formatDateTime(review.createdAt), style: const TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        review.reviewerName,
+                        style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                      ),
+                      Row(
+                        children: [
+                          for (var s = 1; s <= 5; s++)
+                            Icon(
+                              s <= review.rating ? Icons.star_rounded : Icons.star_border_rounded,
+                              color: AppColors.secondary,
+                              size: 14,
+                            ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                Text(
+                  formatDateTime(review.createdAt),
+                  style: const TextStyle(color: AppColors.textSecondary, fontSize: 11),
+                ),
               ],
             ),
-            if (review.comment != null && review.comment!.isNotEmpty) Text(review.comment!),
+            if (review.comment != null && review.comment!.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: AppSpacing.xs),
+                child: Text(review.comment!, style: const TextStyle(height: 1.45)),
+              ),
             if (review.brandReply != null)
               Container(
                 width: double.infinity,

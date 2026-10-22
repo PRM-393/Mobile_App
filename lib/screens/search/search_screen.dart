@@ -5,6 +5,7 @@ import '../../models/campaign.dart';
 import '../../providers/search_provider.dart';
 import '../../services/voucher_services.dart';
 import '../../routes.dart';
+import '../../theme/app_theme.dart';
 import '../../widgets/common.dart';
 import '../../widgets/voucher_card.dart';
 import '../../utils/distance.dart';
@@ -76,8 +77,13 @@ class _SearchScreenState extends State<SearchScreen> {
     final search = context.watch<SearchProvider>();
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Tìm kiếm voucher'),
+        title: const Text('Tìm kiếm'),
         actions: [
+          IconButton(
+            tooltip: 'Bộ lọc',
+            onPressed: _filters,
+            icon: const Icon(Icons.tune_rounded),
+          ),
           IconButton(
             tooltip: 'Bản đồ',
             onPressed: _map,
@@ -87,52 +93,78 @@ class _SearchScreenState extends State<SearchScreen> {
       ),
       body: Column(
         children: [
+          // O tim kiem + nut bo loc + nut ban do
           Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    key: const Key('search-keyword'),
-                    controller: _keyword,
-                    textInputAction: TextInputAction.search,
-                    onSubmitted: search.setKeyword,
-                    decoration: InputDecoration(
-                      hintText: 'Tên voucher hoặc thương hiệu',
-                      suffixIcon: IconButton(
-                        tooltip: 'Tìm kiếm',
-                        onPressed: () => search.setKeyword(_keyword.text),
-                        icon: const Icon(Icons.search),
-                      ),
-                    ),
-                  ),
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.md,
+              AppSpacing.sm,
+              AppSpacing.md,
+              AppSpacing.sm,
+            ),
+            child: TextField(
+              key: const Key('search-keyword'),
+              controller: _keyword,
+              textInputAction: TextInputAction.search,
+              onSubmitted: search.setKeyword,
+              decoration: InputDecoration(
+                hintText: 'Tìm voucher, thương hiệu...',
+                prefixIcon: IconButton(
+                  tooltip: 'Tìm kiếm',
+                  onPressed: () => search.setKeyword(_keyword.text),
+                  icon: const Icon(Icons.search, color: AppColors.primary),
                 ),
-                IconButton(
-                  tooltip: 'Bộ lọc',
-                  onPressed: _filters,
-                  icon: const Icon(Icons.tune),
-                ),
-              ],
+              ),
             ),
           ),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
+          // Tim kiem gan day (Module 9: luu bang shared_preferences)
+          if (search.recentKeywords.isNotEmpty)
+            SizedBox(
+              height: 44,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                children: [
+                  for (final k in search.recentKeywords)
+                    Padding(
+                      padding: const EdgeInsets.only(right: AppSpacing.sm),
+                      child: ActionChip(
+                        avatar: const Icon(
+                          Icons.history,
+                          size: 16,
+                          color: AppColors.textSecondary,
+                        ),
+                        label: Text(k),
+                        onPressed: () {
+                          _keyword.text = k;
+                          search.setKeyword(k);
+                        },
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          SizedBox(
+            height: 48,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
               children: [
                 Padding(
-                  padding: const EdgeInsets.only(left: 16, right: 8),
+                  padding: const EdgeInsets.only(right: AppSpacing.sm),
                   child: ChoiceChip(
                     label: const Text('Tất cả'),
                     selected: search.radiusKm == null,
+                    showCheckmark: false,
                     onSelected: (_) => search.setRadius(null),
                   ),
                 ),
                 for (final km in radiusOptionsKm)
                   Padding(
-                    padding: const EdgeInsets.only(right: 8),
+                    padding: const EdgeInsets.only(right: AppSpacing.sm),
                     child: ChoiceChip(
                       label: Text('Gần tôi $km km'),
                       selected: search.radiusKm == km,
+                      showCheckmark: false,
                       onSelected: (_) => search.setRadius(km),
                     ),
                   ),
@@ -141,16 +173,30 @@ class _SearchScreenState extends State<SearchScreen> {
           ),
           if (search.locationDenied)
             const Padding(
-              padding: EdgeInsets.all(12),
-              child: Text(
+              padding: EdgeInsets.symmetric(horizontal: AppSpacing.md),
+              child: InfoBanner(
                 'Chưa được cấp vị trí. Đang hiển thị danh sách mặc định.',
+                icon: Icons.location_off_outlined,
+                tone: StatusTone.warning,
               ),
             ),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.md,
+              AppSpacing.sm,
+              AppSpacing.md,
+              0,
+            ),
             child: Align(
               alignment: Alignment.centerLeft,
-              child: Text('${search.total} kết quả'),
+              child: Text(
+                '${search.total} kết quả',
+                style: const TextStyle(
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textSecondary,
+                  fontSize: 13,
+                ),
+              ),
             ),
           ),
           Expanded(
@@ -159,7 +205,10 @@ class _SearchScreenState extends State<SearchScreen> {
                 : search.results.isEmpty
                 ? search.error != null
                       ? ErrorState(search.error!, onRetry: search.search)
-                      : const EmptyState('Không tìm thấy voucher phù hợp')
+                      : const EmptyState(
+                          'Không tìm thấy voucher phù hợp',
+                          icon: Icons.search_off_rounded,
+                        )
                 : RefreshIndicator(
                     onRefresh: search.search,
                     child: ListView.builder(
@@ -186,22 +235,16 @@ class _SearchScreenState extends State<SearchScreen> {
                         }
                         final c = search.results[i];
                         return Padding(
-                          padding: const EdgeInsets.only(bottom: 16),
-                          child: Center(
-                            child: SizedBox(
-                              width: 400,
-                              height: 420,
-                              child: VoucherCard(
-                                campaign: c,
-                                distanceLabel: c.distanceKm == null
-                                    ? null
-                                    : formatDistance(c.distanceKm!),
-                                onTap: () => AppRoutes.push(
-                                  context,
-                                  AppRoutes.voucherDetail,
-                                  arguments: c.id,
-                                ),
-                              ),
+                          padding: const EdgeInsets.only(bottom: AppSpacing.sm + 4),
+                          child: VoucherCard(
+                            campaign: c,
+                            distanceLabel: c.distanceKm == null
+                                ? null
+                                : formatDistance(c.distanceKm!),
+                            onTap: () => AppRoutes.push(
+                              context,
+                              AppRoutes.voucherDetail,
+                              arguments: c.id,
                             ),
                           ),
                         );
@@ -214,6 +257,7 @@ class _SearchScreenState extends State<SearchScreen> {
     );
   }
 }
+
 
 class _FilterSheet extends StatefulWidget {
   const _FilterSheet({required this.search, required this.service});
