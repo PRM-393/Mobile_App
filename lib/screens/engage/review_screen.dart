@@ -57,36 +57,80 @@ class _ReviewScreenState extends State<ReviewScreen> {
     }
   }
 
+  // Nhan mo ta theo so sao da chon
+  String get _ratingLabel => switch (_rating) {
+        1 => 'Rất tệ (1/5)',
+        2 => 'Chưa tốt (2/5)',
+        3 => 'Tạm được (3/5)',
+        4 => 'Rất tốt (4/5)',
+        _ => 'Tuyệt vời (5/5)',
+      };
+
   @override
   Widget build(BuildContext context) => Scaffold(
         appBar: AppBar(title: const Text('Đánh giá')),
         body: ListView(
           padding: const EdgeInsets.all(AppSpacing.md),
           children: [
-            Text(widget.args.campaignTitle, style: const TextStyle(fontWeight: FontWeight.w700)),
-            const SizedBox(height: AppSpacing.md),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                for (var n = 1; n <= 5; n++)
-                  IconButton(
-                    key: Key('star-$n'),
-                    iconSize: 40,
-                    onPressed: () => setState(() => _rating = n),
-                    icon: Icon(n <= _rating ? Icons.star : Icons.star_border, color: AppColors.secondary),
-                  ),
-              ],
+            // The voucher gon gang o tren
+            Card(
+              child: ListTile(
+                leading: const BrandAvatar(size: 48),
+                title: Text(
+                  widget.args.campaignTitle,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontWeight: FontWeight.w800),
+                ),
+                subtitle: const Text('Voucher đã sử dụng'),
+              ),
             ),
-            Text('$_rating / 5 sao', textAlign: TextAlign.center, style: const TextStyle(color: AppColors.textSecondary)),
-            const SizedBox(height: AppSpacing.sm),
+            const SizedBox(height: AppSpacing.md),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+                child: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        for (var n = 1; n <= 5; n++)
+                          IconButton(
+                            key: Key('star-$n'),
+                            iconSize: 40,
+                            onPressed: () => setState(() => _rating = n),
+                            icon: Icon(
+                              n <= _rating ? Icons.star_rounded : Icons.star_border_rounded,
+                              color: AppColors.secondary,
+                            ),
+                          ),
+                      ],
+                    ),
+                    Text(
+                      _ratingLabel,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 15,
+                        color: AppColors.primaryDark,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
             TextField(
               key: const Key('review-comment'),
               controller: _commentController,
-              maxLines: 4,
+              maxLines: 5,
               maxLength: 1000,
-              decoration: const InputDecoration(hintText: 'Chia sẻ trải nghiệm của bạn...'),
+              decoration: const InputDecoration(
+                hintText: 'Chia sẻ trải nghiệm của bạn...',
+                alignLabelWithHint: true,
+              ),
             ),
-            if (_error != null) Text(_error!, style: const TextStyle(color: AppColors.danger)),
+            if (_error != null)
+              InfoBanner(_error!, icon: Icons.error_outline, tone: StatusTone.danger),
             const SizedBox(height: AppSpacing.md),
             PrimaryButton(label: 'Gửi đánh giá', loading: _loading, onPressed: _submit),
           ],

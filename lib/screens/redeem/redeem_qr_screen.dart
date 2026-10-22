@@ -112,14 +112,20 @@ class _RedeemQrScreenState extends State<RedeemQrScreen> {
     final token = _token;
     final error = _error;
     return Scaffold(
-      appBar: AppBar(title: const Text('Sử dụng voucher')),
+      appBar: AppBar(title: const Text('Dùng voucher'), centerTitle: true),
       body: ListView(
-        padding: const EdgeInsets.all(AppSpacing.lg),
+        padding: const EdgeInsets.all(AppSpacing.md),
         children: [
-          Text(
-            widget.voucher.campaign?.title ?? 'Voucher',
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+          Column(
+            children: [
+              BrandAvatar(imageUrl: widget.voucher.campaign?.image, size: 60),
+              const SizedBox(height: AppSpacing.sm),
+              Text(
+                widget.voucher.campaign?.title ?? 'Voucher',
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+              ),
+            ],
           ),
           const SizedBox(height: AppSpacing.md),
           if (error?.reason == 'VOUCHER_USED')
@@ -139,45 +145,64 @@ class _RedeemQrScreenState extends State<RedeemQrScreen> {
               message: _blockedMessage(error),
             )
           else ...[
-            Center(
-              child: Container(
-                padding: const EdgeInsets.all(AppSpacing.md),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppColors.border),
+            // The trang chua ma QR + ma OTP thay the
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(AppSpacing.lg),
+                child: Column(
+                  children: [
+                    token == null
+                        ? const SizedBox(
+                            width: 240,
+                            height: 240,
+                            child: Center(
+                              child: CircularProgressIndicator(color: AppColors.primary),
+                            ),
+                          )
+                        : QrImageView(key: const Key('redeem-qr'), data: token.qrPayload, size: 240),
+                    if (token != null) ...[
+                      const SizedBox(height: AppSpacing.md),
+                      const Divider(),
+                      const SizedBox(height: AppSpacing.md),
+                      const Text(
+                        'Mã OTP thay thế (nếu nhân viên không quét được QR)',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                      ),
+                      const SizedBox(height: AppSpacing.xs),
+                      Text(
+                        token.otpCode,
+                        key: const Key('redeem-otp'),
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 34,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 10,
+                          fontFamily: 'monospace',
+                          color: AppColors.primaryDark,
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+                      CountdownTimer(expiresAt: token.expiresAt, onExpire: _onExpire),
+                    ],
+                  ],
                 ),
-                child: token == null
-                    ? const SizedBox(width: 240, height: 240, child: Center(child: CircularProgressIndicator()))
-                    : QrImageView(key: const Key('redeem-qr'), data: token.qrPayload, size: 240),
               ),
             ),
             const SizedBox(height: AppSpacing.md),
-            if (token != null) ...[
-              CountdownTimer(expiresAt: token.expiresAt, onExpire: _onExpire),
-              const SizedBox(height: AppSpacing.md),
-              const Text(
-                'Mã OTP thay thế (nếu nhân viên không quét được QR)',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: AppColors.textSecondary),
-              ),
-              Text(
-                token.otpCode,
-                key: const Key('redeem-otp'),
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 32, fontWeight: FontWeight.w800, letterSpacing: 8),
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              const Text(
+            if (token != null)
+              const InfoBanner(
                 'Mã tự làm mới sau mỗi 60 giây. Đưa mã cho nhân viên tại quầy, không gửi ảnh chụp mã cho người khác.',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                icon: Icons.shield_outlined,
               ),
-            ],
             if (error != null)
               Padding(
                 padding: const EdgeInsets.only(top: AppSpacing.sm),
-                child: Text(error.message, textAlign: TextAlign.center, style: const TextStyle(color: AppColors.danger)),
+                child: InfoBanner(
+                  error.message,
+                  icon: Icons.error_outline,
+                  tone: StatusTone.danger,
+                ),
               ),
           ],
           const SizedBox(height: AppSpacing.lg),
@@ -210,11 +235,19 @@ class _Outcome extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
         padding: const EdgeInsets.all(AppSpacing.lg),
-        decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(16)),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(AppRadius.card),
+        ),
         child: Column(
           children: [
-            Icon(icon, color: color, size: 64),
-            const SizedBox(height: AppSpacing.sm),
+            Container(
+              width: 88,
+              height: 88,
+              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+              child: Icon(icon, color: Colors.white, size: 46),
+            ),
+            const SizedBox(height: AppSpacing.md),
             Text(title, textAlign: TextAlign.center, style: TextStyle(color: color, fontSize: 20, fontWeight: FontWeight.w800)),
             const SizedBox(height: AppSpacing.xs),
             Text(message, textAlign: TextAlign.center),

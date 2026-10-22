@@ -26,7 +26,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Yêu thích')),
+    appBar: AppBar(title: const Text('Voucher yêu thích')),
     body: FutureBuilder<List<Favorite>>(
       future: _future,
       builder: (context, snap) {
@@ -36,9 +36,11 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
         if (snap.hasError) return ErrorState(snap.error.toString());
         final items = snap.data!;
         if (items.isEmpty) {
-          return const EmptyState(
-            'Chưa có mục yêu thích nào.',
+          return EmptyState(
+            'Chưa có voucher yêu thích nào',
             icon: Icons.favorite_border,
+            actionLabel: 'Khám phá ưu đãi',
+            onAction: () => Navigator.maybePop(context),
           );
         }
         return ListView.separated(
@@ -50,15 +52,28 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
             final isCampaign = f.targetType == 'CAMPAIGN';
             return Card(
               child: ListTile(
-                leading: Icon(
-                  isCampaign
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.md,
+                  vertical: AppSpacing.sm,
+                ),
+                leading: BrandAvatar(
+                  size: 48,
+                  icon: isCampaign
                       ? Icons.local_offer_outlined
                       : Icons.storefront_outlined,
                 ),
-                title: Text(isCampaign ? 'Voucher' : 'Thương hiệu'),
+                title: Text(
+                  isCampaign ? 'Voucher' : 'Thương hiệu',
+                  style: const TextStyle(fontWeight: FontWeight.w800),
+                ),
                 subtitle: Text(
                   f.targetId,
                   style: const TextStyle(fontSize: 12),
+                ),
+                trailing: const Icon(
+                  Icons.favorite,
+                  color: AppColors.danger,
+                  size: 20,
                 ),
                 // TODO(F06): hien ten va anh thay vi ma; mo trang thuong hieu khi la BRAND
                 onTap: isCampaign

@@ -110,40 +110,87 @@ class _PaymentResultScreenState extends State<PaymentResultScreen> {
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.lg),
         children: [
-          Icon(icon, color: color, size: 88, key: ValueKey('status-${_order.status}')),
+          // Vong tron trang thai lon, mau theo ket qua don
+          Center(
+            key: ValueKey('status-${_order.status}'),
+            child: Container(
+              width: 104,
+              height: 104,
+              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+              child: Icon(icon, color: Colors.white, size: 56),
+            ),
+          ),
           const SizedBox(height: AppSpacing.md),
-          Text(title, textAlign: TextAlign.center, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
-          const SizedBox(height: AppSpacing.sm),
-          Text(message, textAlign: TextAlign.center, style: const TextStyle(color: AppColors.textSecondary)),
+          Text(
+            title,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            message,
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: AppColors.textSecondary, height: 1.45),
+          ),
           const SizedBox(height: AppSpacing.lg),
           SectionCard(
-            title: _order.campaignTitle ?? 'Đơn hàng',
+            title: 'Thông tin đơn hàng',
+            icon: Icons.receipt_long_outlined,
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Số lượng: ${_order.quantity} · Tổng tiền: ${formatVnd(_order.totalAmount)}'),
+                DetailRow('Voucher', _order.campaignTitle ?? 'Đơn hàng'),
+                DetailRow('Mã đơn', _order.id),
+                DetailRow('Số lượng', 'x${_order.quantity}'),
+                DetailRow('Thời gian', formatDateTime(_order.createdAt)),
                 if (pending && _order.reservedUntil != null)
-                  Text('Giữ chỗ đến: ${formatDateTime(_order.reservedUntil!)}',
-                      style: const TextStyle(color: AppColors.textSecondary)),
+                  DetailRow('Giữ chỗ đến', formatDateTime(_order.reservedUntil!)),
+                const Divider(height: AppSpacing.lg),
+                DetailRow(
+                  'Tổng tiền',
+                  formatVnd(_order.totalAmount),
+                  emphasize: true,
+                ),
               ],
             ),
           ),
           if (_error != null) ...[
             const SizedBox(height: AppSpacing.sm),
-            Text(_error!, style: const TextStyle(color: AppColors.danger)),
+            InfoBanner(_error!, icon: Icons.error_outline, tone: StatusTone.danger),
           ],
-          const SizedBox(height: AppSpacing.lg),
-          if (pending && _paymentUrl != null)
-            PrimaryButton(label: 'Mở trang thanh toán payOS', onPressed: _openPayment),
-          if (pending && _paymentUrl == null)
-            PrimaryButton(key: const Key('simulate-pay'), label: 'Thanh toán thử (demo)', loading: _busy, onPressed: _simulate),
-          if (pending) ...[
-            const SizedBox(height: AppSpacing.sm),
-            OutlinedButton.icon(onPressed: _refresh, icon: const Icon(Icons.refresh), label: const Text('Kiểm tra lại')),
-          ],
-          if (_order.status == 'FULFILLED')
-            PrimaryButton(key: const Key('go-wallet'), label: 'Xem voucher trong ví', onPressed: _goToWallet),
         ],
+      ),
+      // Nut hanh dong nam o thanh duoi co dinh, luon thay duoc du noi dung dai
+      bottomNavigationBar: StickyActionBar(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (pending && _paymentUrl != null)
+              PrimaryButton(label: 'Mở trang thanh toán payOS', onPressed: _openPayment),
+            if (pending && _paymentUrl == null)
+              PrimaryButton(key: const Key('simulate-pay'), label: 'Thanh toán thử (demo)', loading: _busy, onPressed: _simulate),
+            if (pending) ...[
+              const SizedBox(height: AppSpacing.sm),
+              OutlinedButton.icon(onPressed: _refresh, icon: const Icon(Icons.refresh), label: const Text('Kiểm tra lại')),
+            ],
+            if (_order.status == 'FULFILLED') ...[
+              PrimaryButton(
+                key: const Key('go-wallet'),
+                label: 'Xem voucher trong ví',
+                icon: Icons.account_balance_wallet_outlined,
+                onPressed: _goToWallet,
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              OutlinedButton(
+                onPressed: () {
+                  context.read<MainTabController>().go(MainTabController.home);
+                  Navigator.popUntil(context, (route) => route.isFirst);
+                },
+                child: const Text('Về trang chủ'),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }

@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../routes.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/common.dart';
 
 // FR-AUTH-05/08: ho so ca nhan, diem vao Yeu thich / Thong bao / Hoan tien, dang xuat
 class ProfileScreen extends StatelessWidget {
@@ -18,30 +19,54 @@ class ProfileScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.md),
         children: [
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(AppSpacing.lg),
-              child: Column(
-                children: [
-                  const CircleAvatar(
-                    radius: 36,
-                    child: Icon(Icons.person, size: 36),
+          // The header gradient: avatar + ten + email
+          GradientHeaderCard(
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            child: Row(
+              children: [
+                Container(
+                  width: 64,
+                  height: 64,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: .18),
+                    shape: BoxShape.circle,
                   ),
-                  const SizedBox(height: AppSpacing.sm),
-                  Text(
-                    user?.fullName ?? (user == null ? 'Khách' : 'Khách hàng'),
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 16,
-                    ),
+                  child: const Icon(Icons.person, size: 34, color: Colors.white),
+                ),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        user?.fullName ?? (user == null ? 'Khách' : 'Khách hàng'),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w900,
+                          fontSize: 19,
+                        ),
+                      ),
+                      if (user != null) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          user.email,
+                          style: const TextStyle(
+                            color: Color(0xFFD9FFF3),
+                            fontSize: 13,
+                          ),
+                        ),
+                      ] else
+                        const Text(
+                          'Đăng nhập để mua và dùng voucher',
+                          style: TextStyle(
+                            color: Color(0xFFD9FFF3),
+                            fontSize: 13,
+                          ),
+                        ),
+                    ],
                   ),
-                  if (user != null)
-                    Text(
-                      user.email,
-                      style: const TextStyle(color: AppColors.textSecondary),
-                    ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
           const SizedBox(height: AppSpacing.md),
@@ -57,15 +82,24 @@ class ProfileScreen extends StatelessWidget {
                   _menu(
                     context,
                     Icons.favorite_border,
-                    'Yêu thích',
+                    'Voucher yêu thích',
                     AppRoutes.favorites,
                   ),
+                  const Divider(indent: AppSpacing.md, endIndent: AppSpacing.md),
                   _menu(
                     context,
                     Icons.notifications_none,
                     'Thông báo',
                     AppRoutes.notifications,
                   ),
+                  const Divider(indent: AppSpacing.md, endIndent: AppSpacing.md),
+                  _menu(
+                    context,
+                    Icons.tune_rounded,
+                    'Cài đặt thông báo',
+                    AppRoutes.notificationSettings,
+                  ),
+                  const Divider(indent: AppSpacing.md, endIndent: AppSpacing.md),
                   _menu(
                     context,
                     Icons.currency_exchange,
@@ -77,10 +111,18 @@ class ProfileScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: AppSpacing.md),
+            const Card(
+              child: ListTile(
+                leading: Icon(Icons.info_outline),
+                title: Text('Về ứng dụng'),
+                subtitle: Text('Voucher Platform · phiên bản 1.0.0'),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
             OutlinedButton.icon(
               style: OutlinedButton.styleFrom(
                 foregroundColor: AppColors.danger,
-                minimumSize: const Size.fromHeight(48),
+                side: const BorderSide(color: AppColors.danger),
               ),
               onPressed: auth.logout,
               icon: const Icon(Icons.logout),
