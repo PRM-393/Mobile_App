@@ -62,16 +62,10 @@ class OrderService {
 
   final ApiClient _api;
 
-  Future<CreateOrderResult> create(String campaignId, int quantity) async =>
-      CreateOrderResult.fromJson(
-        await _api.post(
-          '/orders',
-          body: {'campaignId': campaignId, 'quantity': quantity},
-        ) as Map<String, dynamic>,
-      );
+  Future<CreateOrderResult> create(String campaignId, int quantity) async => CreateOrderResult.fromJson(
+      await _api.post('/orders', body: {'campaignId': campaignId, 'quantity': quantity}) as Map<String, dynamic>);
 
-  Future<List<Order>> myOrders() async =>
-      asList(await _api.get('/orders/me'), Order.fromJson);
+  Future<List<Order>> myOrders() async => asList(await _api.get('/orders/me'), Order.fromJson);
 
   // FR-ORDER-05: hoi trang thai don tu may chu
   Future<Order> getOrder(String id) async => Order.fromJson(await _api.get('/orders/$id') as Map<String, dynamic>);
@@ -86,7 +80,17 @@ class OrderService {
     return Order.fromJson(json['order'] as Map<String, dynamic>);
   }
 
-  Future<List<VoucherItem>> myWallet() async => asList(await _api.get('/wallet'), VoucherItem.fromJson);
+  // FR-REDEEM-01: JSON goc cua vi (WalletProvider luu nguyen vao SQLite de xem khi mat mang)
+  Future<List<Map<String, dynamic>>> myWalletJson() async {
+    final json = await _api.get('/wallet');
+    return json is List ? json.whereType<Map<String, dynamic>>().toList() : <Map<String, dynamic>>[];
+  }
+
+  Future<List<VoucherItem>> myWallet() async => (await myWalletJson()).map(VoucherItem.fromJson).toList();
+
+  // Chi tiet voucher da mua: chi nhanh ap dung, lan su dung, yeu cau hoan (chi chu so huu)
+  Future<WalletVoucherDetail> walletDetail(String voucherItemId) async =>
+      WalletVoucherDetail.fromJson(await _api.get('/wallet/$voucherItemId') as Map<String, dynamic>);
 }
 
 // FR-REDEEM-02/03: xin token QR dong + OTP cho mot voucher
@@ -95,11 +99,8 @@ class RedeemService {
 
   final ApiClient _api;
 
-  Future<RedeemToken> requestToken(String voucherItemId) async =>
-      RedeemToken.fromJson(
-        await _api.post('/redeem/token', body: {'voucherItemId': voucherItemId})
-            as Map<String, dynamic>,
-      );
+  Future<RedeemToken> requestToken(String voucherItemId) async => RedeemToken.fromJson(
+      await _api.post('/redeem/token', body: {'voucherItemId': voucherItemId}) as Map<String, dynamic>);
 }
 
 // FR-REFUND-*: gui yeu cau hoan tien, theo doi trang thai
@@ -108,16 +109,10 @@ class RefundService {
 
   final ApiClient _api;
 
-  Future<RefundRequest> request(String voucherItemId, {String? reason}) async =>
-      RefundRequest.fromJson(
-        await _api.post(
-          '/refunds',
-          body: {'voucherItemId': voucherItemId, 'reason': reason},
-        ) as Map<String, dynamic>,
-      );
+  Future<RefundRequest> request(String voucherItemId, {String? reason}) async => RefundRequest.fromJson(
+      await _api.post('/refunds', body: {'voucherItemId': voucherItemId, 'reason': reason}) as Map<String, dynamic>);
 
-  Future<List<RefundRequest>> myRequests() async =>
-      asList(await _api.get('/refunds/me'), RefundRequest.fromJson);
+  Future<List<RefundRequest>> myRequests() async => asList(await _api.get('/refunds/me'), RefundRequest.fromJson);
 }
 
 // FR-ENGAGE-*: yeu thich, danh gia, thong bao
@@ -126,26 +121,24 @@ class EngageService {
 
   final ApiClient _api;
 
-  Future<void> toggleFavorite(String targetType, String targetId) => _api.post(
-    '/favorites',
-    body: {'targetType': targetType, 'targetId': targetId},
-  );
+  Future<void> toggleFavorite(String targetType, String targetId) =>
+      _api.post('/favorites', body: {'targetType': targetType, 'targetId': targetId});
 
-  Future<List<Favorite>> myFavorites() async =>
-      asList(await _api.get('/favorites/me'), Favorite.fromJson);
+  Future<List<Favorite>> myFavorites() async => asList(await _api.get('/favorites/me'), Favorite.fromJson);
 
-  Future<void> createReview(
-    String voucherItemId,
-    int rating, {
-    String? comment,
-  }) => _api.post(
-    '/reviews',
-    body: {
-      'voucherItemId': voucherItemId,
-      'rating': rating,
-      'comment': comment,
-    },
-  );
+  // F15: danh gia theo chien dich (may chu kiem tra da dung voucher - BR-10, moi chien dich 1 lan - DC-09)
+  Future<void> createReview(String campaignId, int rating, {String? comment}) => _api.post('/reviews', body: {
+        'campaignId': campaignId,
+        'rating': rating,
+        if (comment != null && comment.isNotEmpty) 'comment': comment,
+      });
+
+  // Danh gia cong khai + diem trung binh (Guest cung xem duoc)
+  Future<ReviewPage> campaignReviews(String campaignId, {int page = 1}) async =>
+      ReviewPage.fromJson(await _api.get('/campaigns/$campaignId/reviews', query: {'page': page}));
+
+  Future<ReviewEligibility> reviewEligibility(String campaignId) async => ReviewEligibility.fromJson(
+      await _api.get('/campaigns/$campaignId/reviews/eligibility') as Map<String, dynamic>);
 
   // F16: thong bao theo trang (20 / trang), kem so chua doc
   Future<NotificationPage> myNotifications({int page = 1}) async =>
@@ -161,8 +154,6 @@ class EngageService {
   Future<List<NotificationSetting>> updateNotificationSetting(String type, bool enabled) async => asList(
       await _api.put('/notifications/settings', body: {'type': type, 'enabled': enabled}), NotificationSetting.fromJson);
 
-  Future<void> registerDeviceToken(String token, String platform) => _api.post(
-    '/notifications/device-token',
-    body: {'token': token, 'platform': platform},
-  );
+  Future<void> registerDeviceToken(String token, String platform) =>
+      _api.post('/notifications/device-token', body: {'token': token, 'platform': platform});
 }

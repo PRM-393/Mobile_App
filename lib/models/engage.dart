@@ -90,3 +90,69 @@ class Favorite {
     targetId: json['targetId'] as String? ?? '',
   );
 }
+
+// Danh gia cong khai cua chien dich (FR-ENGAGE-02..04): ten nguoi danh gia da duoc may chu che bot
+class ReviewItem {
+  const ReviewItem({
+    required this.id,
+    required this.rating,
+    required this.createdAt,
+    required this.reviewerName,
+    this.comment,
+    this.brandReply,
+    this.brandRepliedAt,
+  });
+
+  final String id;
+  final int rating;
+  final DateTime createdAt;
+  final String reviewerName;
+  final String? comment;
+  final String? brandReply;
+  final DateTime? brandRepliedAt;
+
+  factory ReviewItem.fromJson(Map<String, dynamic> json) => ReviewItem(
+        id: json['id'] as String,
+        rating: asInt(json['rating']),
+        createdAt: asDate(json['createdAt']),
+        reviewerName: json['reviewerName'] as String? ?? 'Khách hàng',
+        comment: json['comment'] as String?,
+        brandReply: json['brandReply'] as String?,
+        brandRepliedAt: asDateOrNull(json['brandRepliedAt']),
+      );
+}
+
+// GET /campaigns/:id/reviews: mot trang danh gia + diem trung binh (chi tinh danh gia khong bi an)
+class ReviewPage {
+  const ReviewPage({required this.items, required this.total, required this.page, this.avgRating, this.reviewCount = 0});
+
+  final List<ReviewItem> items;
+  final int total;
+  final int page;
+  final double? avgRating;
+  final int reviewCount;
+
+  bool get hasMore => page * 20 < total && items.isNotEmpty;
+
+  factory ReviewPage.fromJson(Object? json) {
+    final map = json is Map<String, dynamic> ? json : const <String, dynamic>{};
+    return ReviewPage(
+      items: asList(map['items'], ReviewItem.fromJson),
+      total: asInt(map['total']),
+      page: asInt(map['page'], 1),
+      avgRating: asDoubleOrNull(map['avgRating']),
+      reviewCount: asInt(map['reviewCount']),
+    );
+  }
+}
+
+// BR-10: chi khach da dung it nhat 1 voucher cua chien dich va chua danh gia moi thay nut "Đánh giá"
+class ReviewEligibility {
+  const ReviewEligibility({required this.canReview, this.reason});
+
+  final bool canReview;
+  final String? reason;
+
+  factory ReviewEligibility.fromJson(Map<String, dynamic> json) =>
+      ReviewEligibility(canReview: json['canReview'] == true, reason: json['reason'] as String?);
+}

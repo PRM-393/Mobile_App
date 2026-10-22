@@ -35,7 +35,7 @@ void main() {
       final page = await engage.myNotifications();
       if (!page.items.any((n) => n.type == 'VOUCHER_USED')) throw 'khong co VOUCHER_USED (${page.items.map((n) => n.type).toSet()})';
     });
-    await step('danh gia: tao danh gia', () => engage.createReview(state['voucherItemId'] as String, 5, comment: 'Ngon'));
+    await step('danh gia: tao danh gia', () => engage.createReview(state['campaignId'] as String, 5, comment: 'Ngon'));
     await step('auth: dang xuat', () => AuthService(api).logout());
 
     final failed = results.values.where((v) => v != null).length;
