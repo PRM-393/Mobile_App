@@ -8,6 +8,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:voucher_platform_mobile/services/api_client.dart';
 import 'package:voucher_platform_mobile/services/auth_service.dart';
+import 'package:voucher_platform_mobile/services/profile_service.dart';
 import 'package:voucher_platform_mobile/services/voucher_services.dart';
 
 const liveApi = String.fromEnvironment('LIVE_API');
@@ -70,7 +71,30 @@ void main() {
     final token = await step('redeem: sinh QR + OTP', () => redeem.requestToken(items.first.id));
 
     await step('yeu thich: bat / tat', () => engage.toggleFavorite('CAMPAIGN', campaignId!));
-    await step('yeu thich: danh sach', () => engage.myFavorites());
+    await step('yeu thich: danh sach co ten that', () async {
+      final favs = await engage.myFavorites();
+      if (favs.any((f) => f.title == null)) throw 'favorite thieu ten';
+    });
+    // F06: trang thuong hieu + theo doi
+    final detail = await step('chi tiet: co ten thuong hieu', () async {
+      final d = await search.detail(campaignId!);
+      if (d.brandName == null) throw 'thieu brandName';
+      return d;
+    });
+    final brand = await step('thuong hieu: trang cong khai', () => search.brandPage(detail!.brandId));
+    await step('thuong hieu: theo doi', () async {
+      if (!await engage.toggleFavorite('BRAND', brand!.id)) throw 'chua theo doi';
+      final after = await search.brandPage(brand.id);
+      if (after.followerCount != brand.followerCount + 1) throw 'followerCount=${after.followerCount}';
+    });
+    // F17: ho so
+    final profile = ProfileService(api);
+    await step('ho so: xem', () => profile.me());
+    await step('ho so: sua ho ten + so dien thoai + anh', () async {
+      const png = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+      final u = await profile.update(fullName: 'Khach Live', phone: '0901234567', avatar: png);
+      if (u.phone != '0901234567' || u.avatar != png) throw 'chua luu';
+    });
     final page = await step('thong bao: danh sach', () => engage.myNotifications());
     if (page != null && page.items.isEmpty) results['thong bao: danh sach'] = 'khong co thong bao voucher ve vi';
     await step('thong bao: doc tat ca', () => engage.markAllNotificationsRead());
