@@ -92,13 +92,80 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               final n = provider.items[i];
               return Card(
                 key: ValueKey(n.id),
-                color: n.isRead ? null : AppColors.primary.withValues(alpha: 0.06),
-                child: ListTile(
+                // Thong bao chua doc: nen primarySoft + chamter teal
+                color: n.isRead ? null : AppColors.primarySoft,
+                clipBehavior: Clip.antiAlias,
+                child: InkWell(
                   onTap: () => _open(n),
-                  leading: Icon(_icon(n.type), color: n.isRead ? AppColors.textSecondary : AppColors.primary),
-                  title: Text(n.title, style: TextStyle(fontWeight: n.isRead ? FontWeight.w500 : FontWeight.w700)),
-                  subtitle: Text('${n.body}\n${formatDateTime(n.createdAt)}'),
-                  isThreeLine: true,
+                  child: Padding(
+                    padding: const EdgeInsets.all(AppSpacing.md),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          width: 42,
+                          height: 42,
+                          decoration: BoxDecoration(
+                            color: n.isRead
+                                ? AppColors.background
+                                : AppColors.surface,
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: Icon(
+                            _icon(n.type),
+                            size: 21,
+                            color: n.isRead
+                                ? AppColors.textSecondary
+                                : AppColors.primary,
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.sm + 4),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                n.title,
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: n.isRead
+                                      ? FontWeight.w600
+                                      : FontWeight.w800,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                n.body,
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  height: 1.4,
+                                  color: AppColors.textSecondary,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                formatDateTime(n.createdAt),
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  color: AppColors.textSecondary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (!n.isRead)
+                          Container(
+                            margin: const EdgeInsets.only(left: AppSpacing.sm, top: 4),
+                            width: 9,
+                            height: 9,
+                            decoration: const BoxDecoration(
+                              color: AppColors.primary,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
                 ),
               );
             },

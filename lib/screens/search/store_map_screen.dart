@@ -6,7 +6,9 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../models/campaign.dart';
 import '../../services/voucher_services.dart';
+import '../../theme/app_theme.dart';
 import '../../utils/distance.dart';
+import '../../widgets/common.dart';
 
 // F04: active campaign stores only; location is optional and directions use an external map.
 class StoreMapScreen extends StatefulWidget {
@@ -93,42 +95,34 @@ class _StoreMapScreenState extends State<StoreMapScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Bản đồ chi nhánh')),
+    appBar: AppBar(title: const Text('Bản đồ cửa hàng')),
     body: FutureBuilder<List<Store>>(
       future: _future,
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
-          return const Center(child: CircularProgressIndicator());
+          return const LoadingState();
         }
         if (snapshot.hasError) {
-          return Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text('Không tải được chi nhánh.'),
-                TextButton(
-                  onPressed: () => setState(() => _future = load()),
-                  child: const Text('Thử lại'),
-                ),
-              ],
-            ),
+          return ErrorState(
+            'Không tải được chi nhánh.',
+            onRetry: () => setState(() => _future = load()),
           );
         }
         final stores = snapshot.data!;
         if (stores.isEmpty) {
-          return const Center(
-            child: Text(
-              'Không có chi nhánh phù hợp. Hãy đổi bộ lọc hoặc tải thêm kết quả.',
-            ),
+          return const EmptyState(
+            'Không có chi nhánh phù hợp. Hãy đổi bộ lọc hoặc tải thêm kết quả.',
+            icon: Icons.storefront_outlined,
           );
         }
         final selected = _selected ?? stores.first;
         return Column(
           children: [
             const Padding(
-              padding: EdgeInsets.all(8),
-              child: Text(
-                'Chi nhánh của các voucher đã tải. Chạm ghim để xem và chỉ đường.',
+              padding: EdgeInsets.all(AppSpacing.md),
+              child: InfoBanner(
+                'Cửa hàng của các voucher đã tải. Chạm ghim để xem và chỉ đường.',
+                icon: Icons.touch_app_outlined,
               ),
             ),
             Expanded(
@@ -169,9 +163,9 @@ class _StoreMapScreenState extends State<StoreMapScreen> {
                             icon: Icon(
                               Icons.location_on,
                               color: selected.id == s.id
-                                  ? Colors.red
-                                  : Colors.teal,
-                              size: 36,
+                                  ? AppColors.danger
+                                  : AppColors.primary,
+                              size: selected.id == s.id ? 42 : 34,
                             ),
                           ),
                         ),
@@ -190,14 +184,72 @@ class _StoreMapScreenState extends State<StoreMapScreen> {
                 ],
               ),
             ),
-            SafeArea(
-              child: ListTile(
-                title: Text(selected.name),
-                subtitle: Text(selected.address),
-                trailing: IconButton(
-                  tooltip: 'Chỉ đường',
-                  onPressed: () => directions(selected),
-                  icon: const Icon(Icons.directions),
+            // The thong tin cua hang dang chon, dang bottom sheet
+            Container(
+              decoration: const BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.vertical(
+                  top: Radius.circular(AppRadius.lgSheet),
+                ),
+                boxShadow: appCardShadow,
+              ),
+              child: SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.all(AppSpacing.md),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const BrandAvatar(
+                        size: 48,
+                        icon: Icons.storefront_outlined,
+                      ),
+                      const SizedBox(width: AppSpacing.sm + 4),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              selected.name,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w800,
+                                fontSize: 15,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              selected.address,
+                              style: const TextStyle(
+                                color: AppColors.textSecondary,
+                                fontSize: 13,
+                                height: 1.35,
+                              ),
+                            ),
+                            if (selected.distanceKm != null)
+                              Text(
+                                formatDistance(selected.distanceKm!),
+                                style: const TextStyle(
+                                  color: AppColors.primary,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      FilledButton.icon(
+                        style: FilledButton.styleFrom(
+                          minimumSize: const Size(0, 44),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.md,
+                          ),
+                        ),
+                        onPressed: () => directions(selected),
+                        icon: const Icon(Icons.directions, size: 18),
+                        label: const Text('Chỉ đường'),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),

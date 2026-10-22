@@ -75,19 +75,36 @@ class _RefundRequestScreenState extends State<RefundRequestScreen> {
         child: ListView(
           padding: const EdgeInsets.all(AppSpacing.md),
           children: [
-            Text(v.campaign?.title ?? 'Voucher', style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
-            Text('Mã tra cứu: ${v.code}', style: const TextStyle(color: AppColors.textSecondary)),
-            if (v.campaign != null)
-              Text('Số tiền hoàn dự kiến: ${formatVnd(v.campaign!.salePrice)}',
-                  style: const TextStyle(color: AppColors.textSecondary)),
-            if (deadline != null)
-              Text('Hạn chót yêu cầu hoàn: ${formatDateTime(deadline)}',
-                  key: const Key('refund-deadline'), style: const TextStyle(fontWeight: FontWeight.w600)),
-            const SizedBox(height: AppSpacing.sm),
-            const Text(
+            // The thong tin voucher dang yeu cau hoan
+            SectionCard(
+              title: 'Thông tin voucher',
+              icon: Icons.confirmation_number_outlined,
+              child: Column(
+                children: [
+                  DetailRow('Voucher', v.campaign?.title ?? 'Voucher'),
+                  DetailRow('Mã tra cứu', v.code),
+                  if (deadline != null)
+                    DetailRow(
+                      key: const Key('refund-deadline'),
+                      'Hạn chót yêu cầu hoàn',
+                      formatDateTime(deadline),
+                      valueColor: AppColors.danger,
+                    ),
+                  if (v.campaign != null) ...[
+                    const Divider(height: AppSpacing.lg),
+                    DetailRow(
+                      'Số tiền hoàn dự kiến',
+                      formatVnd(v.campaign!.salePrice),
+                      emphasize: true,
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            const InfoBanner(
               'Chỉ áp dụng cho voucher chưa sử dụng, trong vòng 7 ngày kể từ ngày mua và còn ít nhất '
               '3 ngày trước hạn sử dụng (BR-05).',
-              style: TextStyle(color: AppColors.textSecondary),
             ),
             const SizedBox(height: AppSpacing.md),
             if (result != null) ...[
@@ -102,26 +119,27 @@ class _RefundRequestScreenState extends State<RefundRequestScreen> {
               ),
               OutlinedButton(onPressed: () => Navigator.pop(context), child: const Text('Đóng')),
             ] else if (blocked) ...[
-              Container(
+              InfoBanner(
                 key: const Key('refund-blocked'),
-                padding: const EdgeInsets.all(AppSpacing.md),
-                decoration: BoxDecoration(
-                  color: AppColors.danger.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(eligibility.reason ?? 'Voucher không đủ điều kiện hoàn tiền.',
-                    style: const TextStyle(color: AppColors.danger)),
+                eligibility.reason ?? 'Voucher không đủ điều kiện hoàn tiền.',
+                icon: Icons.block,
+                tone: StatusTone.danger,
               ),
               const SizedBox(height: AppSpacing.md),
               const PrimaryButton(label: 'Gửi yêu cầu', onPressed: null),
             ] else ...[
               TextFormField(
                 controller: _reasonController,
-                maxLines: 3,
+                maxLines: 4,
                 maxLength: 500,
-                decoration: const InputDecoration(labelText: 'Lý do hoàn tiền (không bắt buộc)'),
+                decoration: const InputDecoration(
+                  labelText: 'Lý do hoàn tiền (không bắt buộc)',
+                  hintText: 'Ví dụ: cửa hàng từ chối, mua trùng...',
+                  alignLabelWithHint: true,
+                ),
               ),
-              if (_error != null) Text(_error!, style: const TextStyle(color: AppColors.danger)),
+              if (_error != null)
+                InfoBanner(_error!, icon: Icons.error_outline, tone: StatusTone.danger),
               const SizedBox(height: AppSpacing.md),
               PrimaryButton(label: 'Gửi yêu cầu', loading: _loading, onPressed: _submit),
             ],

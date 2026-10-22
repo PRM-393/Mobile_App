@@ -70,10 +70,10 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
     if (mounted) await _refresh();
   }
 
-  Color _statusColor(String status) => switch (status) {
-    'FULFILLED' || 'PAID' => AppColors.success,
-    'PENDING' => AppColors.secondary,
-    _ => AppColors.danger,
+  StatusTone _statusTone(String status) => switch (status) {
+    'FULFILLED' || 'PAID' => StatusTone.success,
+    'PENDING' => StatusTone.warning,
+    _ => StatusTone.danger,
   };
 
   @override
@@ -87,7 +87,19 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
           if (snap.connectionState != ConnectionState.done) return const LoadingState();
           if (snap.hasError) return ErrorState(snap.error.toString(), onRetry: _refresh);
           final orders = snap.data!;
-          if (orders.isEmpty) return ListView(children: const [EmptyState('Chưa có đơn hàng nào.')]);
+          if (orders.isEmpty) {
+            return ListView(
+              children: [
+                EmptyState(
+                  'Chưa có đơn hàng nào.',
+                  icon: Icons.receipt_long_outlined,
+                  actionLabel: 'Khám phá ưu đãi',
+                  onAction: () =>
+                      context.read<MainTabController>().go(MainTabController.home),
+                ),
+              ],
+            );
+          }
           return ListView.separated(
             physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.all(AppSpacing.md),
@@ -98,27 +110,97 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
               final canRetry = o.canRetry(DateTime.now());
               return Card(
                 key: ValueKey(o.id),
-                child: ListTile(
+                clipBehavior: Clip.antiAlias,
+                child: InkWell(
                   onTap: () => _open(o),
-                  title: Text(
-                    o.campaignTitle ?? formatVnd(o.totalAmount),
-                    style: const TextStyle(fontWeight: FontWeight.w700),
-                  ),
-                  subtitle: Text(
-                    '${formatVnd(o.totalAmount)} · SL ${o.quantity} · ${formatDateTime(o.createdAt)}'
-                    '${canRetry ? '\nGiữ chỗ đến ${formatDateTime(o.reservedUntil!)}' : ''}',
-                  ),
-                  isThreeLine: canRetry,
-                  trailing: canRetry
-                      ? FilledButton(
-                          style: FilledButton.styleFrom(minimumSize: const Size(0, 36)),
-                          onPressed: () => _retry(o),
-                          child: const Text('Thanh toán lại'),
-                        )
-                      : Text(
-                          orderStatusLabels[o.status] ?? o.status,
-                          style: TextStyle(color: _statusColor(o.status), fontWeight: FontWeight.w600),
+                  child: Padding(
+                    padding: const EdgeInsets.all(AppSpacing.md),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Dong dau: ma don + nhan trang thai
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                '#${o.id.length > 8 ? o.id.substring(0, 8).toUpperCase() : o.id.toUpperCase()}',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 13,
+                                  color: AppColors.textSecondary,
+                                ),
+                              ),
+                            ),
+                            StatusPill(
+                              orderStatusLabels[o.status] ?? o.status,
+                              tone: _statusTone(o.status),
+                            ),
+                          ],
                         ),
+                        const SizedBox(height: AppSpacing.sm),
+                        Text(
+                          o.campaignTitle ?? 'Đơn hàng',
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w800,
+                            fontSize: 15,
+                            height: 1.3,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'SL ${o.quantity} · ${formatDateTime(o.createdAt)}',
+                          style: const TextStyle(
+                            color: AppColors.textSecondary,
+                            fontSize: 12,
+                          ),
+                        ),
+                        if (canRetry)
+                          Text(
+                            'Giữ chỗ đến ${formatDateTime(o.reservedUntil!)}',
+                            style: const TextStyle(
+                              color: AppColors.danger,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        const SizedBox(height: AppSpacing.sm),
+                        const Divider(),
+                        const SizedBox(height: AppSpacing.sm),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                formatVnd(o.totalAmount),
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w900,
+                                  color: AppColors.primary,
+                                ),
+                              ),
+                            ),
+                            if (canRetry)
+                              FilledButton(
+                                style: FilledButton.styleFrom(
+                                  minimumSize: const Size(0, 40),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: AppSpacing.md,
+                                  ),
+                                ),
+                                onPressed: () => _retry(o),
+                                child: const Text('Thanh toán lại'),
+                              )
+                            else
+                              TextButton(
+                                onPressed: () => _open(o),
+                                child: const Text('Chi tiết'),
+                              ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               );
             },
