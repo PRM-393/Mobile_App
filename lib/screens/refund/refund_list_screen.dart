@@ -41,7 +41,16 @@ class _RefundListScreenState extends State<RefundListScreen> {
               if (snap.connectionState != ConnectionState.done) return const LoadingState();
               if (snap.hasError) return ListView(children: [ErrorState(snap.error.toString(), onRetry: _reload)]);
               final items = snap.data!;
-              if (items.isEmpty) return ListView(children: const [EmptyState('Bạn chưa gửi yêu cầu hoàn tiền nào.')]);
+              if (items.isEmpty) {
+                return ListView(
+                  children: const [
+                    EmptyState(
+                      'Bạn chưa gửi yêu cầu hoàn tiền nào.',
+                      icon: Icons.currency_exchange,
+                    ),
+                  ],
+                );
+              }
               return ListView.separated(
                 padding: const EdgeInsets.all(AppSpacing.md),
                 itemCount: items.length,
@@ -69,14 +78,44 @@ class _RefundCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(r.campaignTitle ?? 'Voucher', style: const TextStyle(fontWeight: FontWeight.w700)),
-            if (r.voucherCode != null) Text('Mã tra cứu: ${r.voucherCode}', style: muted),
-            if (r.amount != null) Text('Số tiền: ${formatVnd(r.amount!)}', style: muted),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Text(
+                    r.campaignTitle ?? 'Voucher',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 15,
+                      height: 1.3,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            if (r.voucherCode != null) Text('Mã tra cứu ${r.voucherCode}', style: muted),
+            if (r.amount != null)
+              Text(
+                formatVnd(r.amount!),
+                style: const TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w900,
+                  color: AppColors.primary,
+                ),
+              ),
+            const SizedBox(height: AppSpacing.sm),
+            const Divider(),
             const SizedBox(height: AppSpacing.sm),
             _Timeline(request: r),
             if (r.rejectReason != null) ...[
-              const SizedBox(height: AppSpacing.xs),
-              Text('Lý do: ${r.rejectReason}', style: const TextStyle(color: AppColors.danger)),
+              const SizedBox(height: AppSpacing.sm),
+              InfoBanner(
+                'Lý do: ${r.rejectReason}',
+                icon: Icons.info_outline,
+                tone: StatusTone.danger,
+              ),
             ],
             if (r.gatewayRefundId != null) Text('Mã giao dịch hoàn: ${r.gatewayRefundId}', style: muted),
           ],

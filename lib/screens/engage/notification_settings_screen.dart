@@ -43,15 +43,38 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
           return ListView(
             padding: const EdgeInsets.all(AppSpacing.md),
             children: [
-              const Text('Chọn những thông báo bạn muốn nhận.', style: TextStyle(color: AppColors.textSecondary)),
-              const SizedBox(height: AppSpacing.sm),
-              for (final s in settings)
-                SwitchListTile(
-                  key: ValueKey('setting-${s.type}'),
-                  title: Text(s.label),
-                  value: s.enabled,
-                  onChanged: (v) => _toggle(s.type, v),
+              const InfoBanner(
+                'Chọn những thông báo bạn muốn nhận. Thông báo hiển thị ngay trên thiết bị.',
+                icon: Icons.notifications_active_outlined,
+              ),
+              const SizedBox(height: AppSpacing.md),
+              Card(
+                child: Column(
+                  children: [
+                    for (final (i, s) in settings.indexed) ...[
+                      if (i > 0)
+                        const Divider(
+                          indent: AppSpacing.md,
+                          endIndent: AppSpacing.md,
+                        ),
+                      SwitchListTile(
+                        key: ValueKey('setting-${s.type}'),
+                        title: Text(
+                          s.label,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 14,
+                          ),
+                        ),
+                        value: s.enabled,
+                        activeThumbColor: Colors.white,
+                        activeTrackColor: AppColors.primary,
+                        onChanged: (v) => _toggle(s.type, v),
+                      ),
+                    ],
+                  ],
                 ),
+              ),
             ],
           );
         },

@@ -79,7 +79,7 @@ class _OtpVerifyScreenState extends State<OtpVerifyScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Nhập mã OTP')),
+    appBar: AppBar(title: const Text('Xác thực OTP')),
     body: SafeArea(
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(AppSpacing.lg),
@@ -88,10 +88,35 @@ class _OtpVerifyScreenState extends State<OtpVerifyScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(
-                'Mã xác thực đã được gửi tới ${widget.email}',
+              Center(
+                child: Container(
+                  width: 72,
+                  height: 72,
+                  decoration: const BoxDecoration(
+                    color: AppColors.primarySoft,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.mark_email_read_outlined,
+                    size: 34,
+                    color: AppColors.primary,
+                  ),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              const Text(
+                'Nhập mã xác thực',
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: AppColors.textSecondary),
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900),
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                'Mã 6 số đã gửi tới ${widget.email}',
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 14,
+                ),
               ),
               const SizedBox(height: AppSpacing.lg),
               TextFormField(
@@ -100,35 +125,57 @@ class _OtpVerifyScreenState extends State<OtpVerifyScreen> {
                 maxLength: 6,
                 textAlign: TextAlign.center,
                 style: const TextStyle(
-                  fontSize: 24,
-                  letterSpacing: 8,
-                  fontWeight: FontWeight.w700,
+                  fontSize: 28,
+                  letterSpacing: 14,
+                  fontWeight: FontWeight.w900,
+                  color: AppColors.primaryDark,
                 ),
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                 decoration: const InputDecoration(
                   hintText: '------',
                   counterText: '',
+                  hintStyle: TextStyle(
+                    fontSize: 28,
+                    letterSpacing: 14,
+                    color: AppColors.border,
+                  ),
+                  contentPadding: EdgeInsets.symmetric(vertical: 20),
                 ),
                 validator: (v) =>
                     (v ?? '').length == 6 ? null : 'Mã OTP gồm 6 chữ số',
               ),
-              if (_error != null)
-                Text(
+              if (_error != null) ...[
+                const SizedBox(height: AppSpacing.sm),
+                InfoBanner(
                   _error!,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: AppColors.danger),
+                  icon: Icons.error_outline,
+                  tone: StatusTone.danger,
                 ),
+              ],
               const SizedBox(height: AppSpacing.md),
               PrimaryButton(
                 label: 'Xác nhận',
                 loading: _loading,
                 onPressed: _verify,
               ),
-              TextButton(
+              const SizedBox(height: AppSpacing.xs),
+              TextButton.icon(
                 onPressed: _resendIn > 0 ? null : _resend,
-                child: Text(
-                  _resendIn > 0 ? 'Gửi lại mã sau ${_resendIn}s' : 'Gửi lại mã',
+                icon: Icon(
+                  _resendIn > 0
+                      ? Icons.timer_outlined
+                      : Icons.refresh_rounded,
+                  size: 18,
                 ),
+                label: Text(
+                  _resendIn > 0
+                      ? 'Gửi lại mã sau 00:${_resendIn.toString().padLeft(2, '0')}'
+                      : 'Gửi lại mã',
+                ),
+              ),
+              TextButton(
+                onPressed: () => Navigator.maybePop(context),
+                child: const Text('Đổi email khác'),
               ),
             ],
           ),

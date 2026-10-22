@@ -27,7 +27,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Yêu thích')),
+    appBar: AppBar(title: const Text('Voucher yêu thích')),
     body: FutureBuilder<List<Favorite>>(
       future: _future,
       builder: (context, snap) {
@@ -37,9 +37,11 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
         if (snap.hasError) return ErrorState(snap.error.toString());
         final items = snap.data!;
         if (items.isEmpty) {
-          return const EmptyState(
-            'Chưa có mục yêu thích nào.',
+          return EmptyState(
+            'Chưa có voucher yêu thích nào',
             icon: Icons.favorite_border,
+            actionLabel: 'Khám phá ưu đãi',
+            onAction: () => Navigator.maybePop(context),
           );
         }
         return ListView.separated(
@@ -57,7 +59,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                 ),
                 title: Text(
                   f.title ?? (f.isBrand ? 'Thương hiệu' : 'Voucher'),
-                  style: const TextStyle(fontWeight: FontWeight.w600),
+                  style: const TextStyle(fontWeight: FontWeight.w800),
                 ),
                 subtitle: Text(f.isBrand
                     ? 'Thương hiệu đang theo dõi'

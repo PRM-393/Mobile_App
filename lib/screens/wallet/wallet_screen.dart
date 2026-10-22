@@ -39,8 +39,70 @@ class _WalletScreenState extends State<WalletScreen> {
                 return offline ? OfflineBanner(cachedAt: cachedAt) : const SizedBox.shrink();
               },
             ),
+            // The tong quan: so voucher dang hieu luc + tong gia tri
+            Selector<WalletProvider, List<VoucherItem>>(
+              selector: (_, w) => w.items,
+              builder: (context, items, _) {
+                final active = items.where((e) => e.canRedeem).toList();
+                final value = active.fold<double>(
+                  0,
+                  (sum, e) => sum + (e.campaign?.faceValue ?? 0),
+                );
+                return Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.md,
+                    AppSpacing.sm,
+                    AppSpacing.md,
+                    0,
+                  ),
+                  child: GradientHeaderCard(
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 52,
+                          height: 52,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: .16),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: const Icon(
+                            Icons.account_balance_wallet_rounded,
+                            color: Colors.white,
+                            size: 26,
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.md),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '${active.length} voucher khả dụng',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 19,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Tổng giá trị ${formatVnd(value)}',
+                                style: const TextStyle(
+                                  color: Color(0xFFD9FFF3),
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
             SizedBox(
-              height: 52,
+              height: 60,
               child: Selector<WalletProvider, String>(
                 selector: (_, w) => w.tab,
                 builder: (context, tab, _) => ListView(
@@ -53,6 +115,7 @@ class _WalletScreenState extends State<WalletScreen> {
                         child: ChoiceChip(
                           label: Text(voucherStatusLabels[t]!),
                           selected: tab == t,
+                          showCheckmark: false,
                           onSelected: (_) => context.read<WalletProvider>().selectTab(t),
                         ),
                       ),
@@ -73,7 +136,14 @@ class _WalletScreenState extends State<WalletScreen> {
                       return ListView(children: [ErrorState(error, onRetry: wallet.load)]);
                     }
                     if (items.isEmpty) {
-                      return ListView(children: const [EmptyState('Không có voucher nào trong mục này.')]);
+                      return ListView(
+                        children: const [
+                          EmptyState(
+                            'Không có voucher nào trong mục này.',
+                            icon: Icons.account_balance_wallet_outlined,
+                          ),
+                        ],
+                      );
                     }
                     // ListView.separated dung builder: chi dung widget cho cac dong dang hien tren man hinh
                     return ListView.separated(
@@ -102,22 +172,14 @@ class OfflineBanner extends StatelessWidget {
   Widget build(BuildContext context) => Container(
         key: const Key('wallet-offline-banner'),
         width: double.infinity,
-        color: AppColors.secondary.withValues(alpha: 0.15),
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
-        child: Row(
-          children: [
-            const Icon(Icons.cloud_off_outlined, color: AppColors.secondary),
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(
-              child: Text(
-                [
-                  'Mất kết nối – đang xem ví đã lưu${cachedAt == null ? '' : ' lúc ${formatDateTime(cachedAt!)}'}.',
-                  'Cần có mạng để tạo mã sử dụng voucher.',
-                ].join('\n'),
-                style: const TextStyle(fontSize: 13),
-              ),
-            ),
-          ],
+        padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.sm, AppSpacing.md, 0),
+        child: InfoBanner(
+          [
+            'Mất kết nối – đang xem ví đã lưu${cachedAt == null ? '' : ' lúc ${formatDateTime(cachedAt!)}'}.',
+            'Cần có mạng để tạo mã sử dụng voucher.',
+          ].join('\n'),
+          icon: Icons.cloud_off_outlined,
+          tone: StatusTone.warning,
         ),
       );
 }
@@ -130,20 +192,13 @@ class StatusChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = switch (status) {
-      'ACTIVE' => AppColors.success,
-      'REFUND_PENDING' => AppColors.secondary,
-      'USED' => AppColors.primary,
-      _ => AppColors.textSecondary,
+    final tone = switch (status) {
+      'ACTIVE' => StatusTone.success,
+      'REFUND_PENDING' => StatusTone.warning,
+      'USED' => StatusTone.primary,
+      _ => StatusTone.neutral,
     };
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 2),
-      decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(12)),
-      child: Text(
-        voucherStatusLabels[status] ?? status,
-        style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w600),
-      ),
-    );
+    return StatusPill(voucherStatusLabels[status] ?? status, tone: tone);
   }
 }
 
@@ -169,19 +224,55 @@ class _VoucherTile extends StatelessWidget {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  BrandAvatar(imageUrl: item.campaign?.image, size: 52),
+                  const SizedBox(width: AppSpacing.sm + 4),
                   Expanded(
-                    child: Text(item.campaign?.title ?? 'Voucher', style: const TextStyle(fontWeight: FontWeight.w700)),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          item.campaign?.title ?? 'Voucher',
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w800,
+                            fontSize: 15,
+                            height: 1.3,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        StatusChip(status),
+                      ],
+                    ),
                   ),
-                  const SizedBox(width: AppSpacing.sm),
-                  StatusChip(status),
                 ],
               ),
+              const SizedBox(height: AppSpacing.sm + 4),
+              const Divider(),
+              const SizedBox(height: AppSpacing.sm),
               // Ma dinh danh chi de tra cuu / khieu nai, khong dung de redeem (BR-16)
-              Text('Mã tra cứu: ${item.code}', style: muted),
-              Text('Hạn sử dụng: ${formatDateTime(item.expireAt)}', style: muted),
+              Row(
+                children: [
+                  const Icon(Icons.confirmation_number_outlined, size: 14, color: AppColors.textSecondary),
+                  const SizedBox(width: AppSpacing.xs),
+                  Text('Mã tra cứu ${item.code}', style: muted),
+                ],
+              ),
+              Row(
+                children: [
+                  const Icon(Icons.event_available_outlined, size: 14, color: AppColors.textSecondary),
+                  const SizedBox(width: AppSpacing.xs),
+                  Text('HSD ${formatDateTime(item.expireAt)}', style: muted),
+                ],
+              ),
               if (item.usedAt != null) Text('Đã dùng lúc: ${formatDateTime(item.usedAt!)}', style: muted),
-              if (status == 'REFUND_PENDING')
-                const Text('Đang chờ hoàn tiền, tạm thời không sử dụng được.', style: muted),
+              if (status == 'REFUND_PENDING') ...[
+                const SizedBox(height: AppSpacing.sm),
+                const InfoBanner(
+                  'Đang chờ hoàn tiền, tạm thời không sử dụng được.',
+                  tone: StatusTone.warning,
+                ),
+              ],
               if (item.canRedeem) ...[
                 const SizedBox(height: AppSpacing.sm),
                 if (offline)

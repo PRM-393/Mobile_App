@@ -4,9 +4,10 @@ import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../routes.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/common.dart';
 import 'profile_edit_screen.dart';
 
-// FR-AUTH-05/08: ho so ca nhan (anh dai dien, ho ten, so dien thoai, sua ho so), Yeu thich / Thong bao / Hoan tien, dang xuat
+// FR-AUTH-05/08: ho so ca nhan, diem vao Yeu thich / Thong bao / Hoan tien, dang xuat
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
 
@@ -19,43 +20,67 @@ class ProfileScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.md),
         children: [
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(AppSpacing.lg),
-              child: Column(
-                children: [
-                  CircleAvatar(
-                    radius: 36,
-                    backgroundColor: AppColors.primarySoft,
-                    foregroundImage: avatarImage(user?.avatar),
-                    child: const Icon(Icons.person, size: 36, color: AppColors.primaryDark),
+          // The header gradient: avatar + ten + email
+          GradientHeaderCard(
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            child: Row(
+              children: [
+                Container(
+                  width: 64,
+                  height: 64,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: .18),
+                    shape: BoxShape.circle,
                   ),
-                  const SizedBox(height: AppSpacing.sm),
-                  Text(
-                    user?.fullName ?? (user == null ? 'Khách' : 'Khách hàng'),
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 16,
-                    ),
+                  clipBehavior: Clip.antiAlias,
+                  // F17: anh dai dien da luu (data URL), chua co thi hien bieu tuong
+                  child: avatarImage(user?.avatar) == null
+                      ? const Icon(Icons.person, size: 34, color: Colors.white)
+                      : Image(image: avatarImage(user!.avatar)!, fit: BoxFit.cover),
+                ),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        user?.fullName ?? (user == null ? 'Khách' : 'Khách hàng'),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w900,
+                          fontSize: 19,
+                        ),
+                      ),
+                      if (user != null) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          user.email,
+                          style: const TextStyle(
+                            color: Color(0xFFD9FFF3),
+                            fontSize: 13,
+                          ),
+                        ),
+                        if (user.phone != null && user.phone!.isNotEmpty)
+                          Text(user.phone!, style: const TextStyle(color: Color(0xFFD9FFF3), fontSize: 13)),
+                      ] else
+                        const Text(
+                          'Đăng nhập để mua và dùng voucher',
+                          style: TextStyle(
+                            color: Color(0xFFD9FFF3),
+                            fontSize: 13,
+                          ),
+                        ),
+                    ],
                   ),
-                  if (user != null)
-                    Text(
-                      user.email,
-                      style: const TextStyle(color: AppColors.textSecondary),
-                    ),
-                  if (user?.phone != null && user!.phone!.isNotEmpty)
-                    Text(user.phone!, style: const TextStyle(color: AppColors.textSecondary)),
-                  if (user != null) ...[
-                    const SizedBox(height: AppSpacing.sm),
-                    OutlinedButton.icon(
-                      key: const Key('edit-profile'),
-                      onPressed: () => AppRoutes.push(context, AppRoutes.profileEdit),
-                      icon: const Icon(Icons.edit_outlined),
-                      label: const Text('Sửa hồ sơ'),
-                    ),
-                  ],
-                ],
-              ),
+                ),
+                if (user != null)
+                  IconButton(
+                    key: const Key('edit-profile'),
+                    tooltip: 'Sửa hồ sơ',
+                    onPressed: () => AppRoutes.push(context, AppRoutes.profileEdit),
+                    icon: const Icon(Icons.edit_outlined, color: Colors.white),
+                  ),
+              ],
             ),
           ),
           const SizedBox(height: AppSpacing.md),
@@ -74,26 +99,45 @@ class ProfileScreen extends StatelessWidget {
                     'Yêu thích',
                     AppRoutes.favorites,
                   ),
+                  const Divider(indent: AppSpacing.md, endIndent: AppSpacing.md),
                   _menu(
                     context,
                     Icons.notifications_none,
                     'Thông báo',
                     AppRoutes.notifications,
                   ),
+                  const Divider(indent: AppSpacing.md, endIndent: AppSpacing.md),
+                  _menu(
+                    context,
+                    Icons.tune_rounded,
+                    'Cài đặt thông báo',
+                    AppRoutes.notificationSettings,
+                  ),
+                  const Divider(indent: AppSpacing.md, endIndent: AppSpacing.md),
                   _menu(
                     context,
                     Icons.currency_exchange,
                     'Yêu cầu hoàn tiền',
                     AppRoutes.refundList,
                   ),
+                  const Divider(indent: AppSpacing.md, endIndent: AppSpacing.md),
+                  _menu(context, Icons.manage_accounts_outlined, 'Sửa hồ sơ', AppRoutes.profileEdit),
                 ],
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            const Card(
+              child: ListTile(
+                leading: Icon(Icons.info_outline),
+                title: Text('Về ứng dụng'),
+                subtitle: Text('Voucher Platform · phiên bản 1.0.0'),
               ),
             ),
             const SizedBox(height: AppSpacing.md),
             OutlinedButton.icon(
               style: OutlinedButton.styleFrom(
                 foregroundColor: AppColors.danger,
-                minimumSize: const Size.fromHeight(48),
+                side: const BorderSide(color: AppColors.danger),
               ),
               onPressed: auth.logout,
               icon: const Icon(Icons.logout),

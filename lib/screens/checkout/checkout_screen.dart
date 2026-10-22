@@ -72,86 +72,163 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.md),
         children: [
-          SectionCard(
-            title: c.title,
-            child: Text(
-              'Đơn giá: ${formatVnd(c.salePrice)}',
-              style: const TextStyle(color: AppColors.textSecondary),
+          // The tom tat don: logo thuong hieu, ten voucher, bo chon so luong
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      BrandAvatar(imageUrl: c.image, size: 56),
+                      const SizedBox(width: AppSpacing.sm + 4),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              c.title,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w800,
+                                fontSize: 15,
+                                height: 1.3,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Đơn giá ${formatVnd(c.salePrice)}',
+                              style: const TextStyle(
+                                color: AppColors.textSecondary,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  const Divider(),
+                  const SizedBox(height: AppSpacing.sm),
+                  Row(
+                    children: [
+                      const Expanded(
+                        child: Text(
+                          'Số lượng',
+                          style: TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                      IconButton.outlined(
+                        onPressed: _quantity > 1
+                            ? () => setState(() => _quantity--)
+                            : null,
+                        icon: const Icon(Icons.remove, size: 18),
+                      ),
+                      SizedBox(
+                        width: 48,
+                        child: Text(
+                          '$_quantity',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                      IconButton.outlined(
+                        onPressed: _quantity < _maxQuantity
+                            ? () => setState(() => _quantity++)
+                            : null,
+                        icon: const Icon(Icons.add, size: 18),
+                      ),
+                    ],
+                  ),
+                  Text(
+                    'Tối đa $_maxQuantity voucher cho mỗi tài khoản trong chiến dịch này.',
+                    style: const TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
           const SizedBox(height: AppSpacing.md),
-          const Text(
-            'Số lượng',
-            style: TextStyle(color: AppColors.textSecondary),
-          ),
-          Row(
-            children: [
-              IconButton.outlined(
-                onPressed: _quantity > 1
-                    ? () => setState(() => _quantity--)
-                    : null,
-                icon: const Icon(Icons.remove),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-                child: Text(
-                  '$_quantity',
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                  ),
+          SectionCard(
+            title: 'Chi tiết thanh toán',
+            icon: Icons.receipt_long_outlined,
+            child: Column(
+              children: [
+                DetailRow('Đơn giá', formatVnd(c.salePrice)),
+                DetailRow('Số lượng', 'x$_quantity'),
+                const Divider(height: AppSpacing.lg),
+                DetailRow(
+                  'Tổng cộng',
+                  formatVnd(c.salePrice * _quantity),
+                  emphasize: true,
                 ),
-              ),
-              IconButton.outlined(
-                onPressed: _quantity < _maxQuantity
-                    ? () => setState(() => _quantity++)
-                    : null,
-                icon: const Icon(Icons.add),
-              ),
-            ],
-          ),
-          Text(
-            'Tối đa $_maxQuantity voucher cho mỗi tài khoản trong chiến dịch này.',
-            style: const TextStyle(
-              color: AppColors.textSecondary,
-              fontSize: 12,
+              ],
             ),
           ),
-          const Divider(height: AppSpacing.xl),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'Tổng tiền',
-                style: TextStyle(fontWeight: FontWeight.w600),
-              ),
-              Text(
-                formatVnd(c.salePrice * _quantity),
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.primary,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          const Text(
+          const SizedBox(height: AppSpacing.md),
+          const InfoBanner(
             'Đơn hàng được giữ chỗ trong 15 phút. Nếu không hoàn tất thanh toán, đơn sẽ tự hủy '
             'và trả lại tồn kho.',
-            style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+            icon: Icons.timer_outlined,
           ),
           if (_error != null) ...[
             const SizedBox(height: AppSpacing.sm),
-            Text(_error!, style: const TextStyle(color: AppColors.danger)),
+            InfoBanner(
+              _error!,
+              icon: Icons.error_outline,
+              tone: StatusTone.danger,
+            ),
           ],
-          const SizedBox(height: AppSpacing.lg),
-          PrimaryButton(
-            label: 'Tiến hành thanh toán',
-            loading: _loading,
-            onPressed: _maxQuantity > 0 ? _pay : null,
-          ),
         ],
+      ),
+      // Thanh hanh dong co dinh: tong tien + nut thanh toan
+      bottomNavigationBar: StickyActionBar(
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'Tổng cộng',
+                    style: TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 12,
+                    ),
+                  ),
+                  Text(
+                    formatVnd(c.salePrice * _quantity),
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w900,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              flex: 2,
+              child: PrimaryButton(
+                label: 'Xác nhận thanh toán',
+                loading: _loading,
+                onPressed: _maxQuantity > 0 ? _pay : null,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
