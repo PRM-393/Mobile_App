@@ -119,6 +119,22 @@ void main() {
   group('NotificationProvider (F16, LO7)', () {
     setUp(() => SharedPreferences.setMockInitialValues({}));
 
+    test('tai khoan chua co thong bao nao: thong bao dau tien den sau van hien len thiet bi', () async {
+      var items = <Map<String, dynamic>>[];
+      final local = RecordingNotifications();
+      final provider = NotificationProvider(
+        EngageService(fakeApi((_) => {'items': items, 'unread': items.length, 'total': items.length})),
+        local: local,
+        preferences: await PreferencesService.create(),
+      );
+
+      await provider.load(silent: true);
+      items = [notification('n1', DateTime.now().toUtc().add(const Duration(seconds: 5)).toIso8601String(), title: 'Dau tien')];
+      await provider.load(silent: true);
+
+      expect(local.calls, ['Dau tien|Body n1']);
+    });
+
     test('lan dau chi ghi moc; lan sau chi bao thong bao moi chua doc len thiet bi', () async {
       var items = [notification('n1', '2026-10-20T03:00:00Z', title: 'Cu')];
       final local = RecordingNotifications();

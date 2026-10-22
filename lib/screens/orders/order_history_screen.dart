@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../models/order.dart';
+import '../../providers/main_tab_controller.dart';
 import '../../routes.dart';
 import '../checkout/payment_result_screen.dart';
 import '../../services/voucher_services.dart';
@@ -21,11 +22,24 @@ class OrderHistoryScreen extends StatefulWidget {
 
 class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
   late Future<List<Order>> _future;
+  MainTabController? _tabs;
 
   @override
   void initState() {
     super.initState();
     _future = context.read<OrderService>().myOrders();
+    _tabs = context.read<MainTabController?>()?..addListener(_onTabChanged);
+  }
+
+  @override
+  void dispose() {
+    _tabs?.removeListener(_onTabChanged);
+    super.dispose();
+  }
+
+  // Vua mua xong chuyen sang tab Don hang thi phai thay don moi
+  void _onTabChanged() {
+    if (_tabs?.index == MainTabController.orders && mounted) _refresh();
   }
 
   Future<void> _refresh() async {
@@ -75,6 +89,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
           final orders = snap.data!;
           if (orders.isEmpty) return ListView(children: const [EmptyState('Chưa có đơn hàng nào.')]);
           return ListView.separated(
+            physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.all(AppSpacing.md),
             itemCount: orders.length,
             separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.sm),
