@@ -86,7 +86,7 @@ class _RefundRequestScreenState extends State<RefundRequestScreen> {
             const SizedBox(height: AppSpacing.sm),
             const Text(
               'Chỉ áp dụng cho voucher chưa sử dụng, trong vòng 7 ngày kể từ ngày mua và còn ít nhất '
-              '3 ngày trước hạn sử dụng (BR-05).',
+              '3 ngày trước hạn sử dụng.',
               style: TextStyle(color: AppColors.textSecondary),
             ),
             const SizedBox(height: AppSpacing.md),

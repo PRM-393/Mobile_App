@@ -78,16 +78,37 @@ class Favorite {
     required this.id,
     required this.targetType,
     required this.targetId,
+    this.title,
+    this.image,
+    this.salePrice,
+    this.faceValue,
+    this.brandName,
+    this.status,
   });
 
   final String id;
   final String targetType;
   final String targetId;
+  // May chu tra kem thong tin muc tieu (ten chien dich / thuong hieu, anh, gia)
+  final String? title;
+  final String? image;
+  final double? salePrice;
+  final double? faceValue;
+  final String? brandName;
+  final String? status;
+
+  bool get isBrand => targetType == 'BRAND';
 
   factory Favorite.fromJson(Map<String, dynamic> json) => Favorite(
     id: json['id'] as String,
     targetType: json['targetType'] as String? ?? 'CAMPAIGN',
     targetId: json['targetId'] as String? ?? '',
+    title: json['title'] as String?,
+    image: json['image'] as String?,
+    salePrice: asDoubleOrNull(json['salePrice']),
+    faceValue: asDoubleOrNull(json['faceValue']),
+    brandName: json['brandName'] as String?,
+    status: json['status'] as String?,
   );
 }
 

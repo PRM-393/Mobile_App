@@ -5,9 +5,10 @@ import '../../models/engage.dart';
 import '../../routes.dart';
 import '../../services/voucher_services.dart';
 import '../../theme/app_theme.dart';
+import '../../utils/format.dart';
 import '../../widgets/common.dart';
 
-// FR-ENGAGE-01: danh sach thuong hieu / voucher da danh dau yeu thich
+// FR-ENGAGE-01: danh sach thuong hieu dang theo doi / voucher da danh dau yeu thich
 class FavoritesScreen extends StatefulWidget {
   const FavoritesScreen({super.key});
 
@@ -47,27 +48,27 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
           separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.sm),
           itemBuilder: (context, i) {
             final f = items[i];
-            final isCampaign = f.targetType == 'CAMPAIGN';
             return Card(
+              key: ValueKey(f.id),
               child: ListTile(
-                leading: Icon(
-                  isCampaign
-                      ? Icons.local_offer_outlined
-                      : Icons.storefront_outlined,
+                leading: CircleAvatar(
+                  backgroundColor: AppColors.primarySoft,
+                  child: Icon(f.isBrand ? Icons.storefront_outlined : Icons.local_offer_outlined, color: AppColors.primaryDark),
                 ),
-                title: Text(isCampaign ? 'Voucher' : 'Thương hiệu'),
-                subtitle: Text(
-                  f.targetId,
-                  style: const TextStyle(fontSize: 12),
+                title: Text(
+                  f.title ?? (f.isBrand ? 'Thương hiệu' : 'Voucher'),
+                  style: const TextStyle(fontWeight: FontWeight.w600),
                 ),
-                // TODO(F06): hien ten va anh thay vi ma; mo trang thuong hieu khi la BRAND
-                onTap: isCampaign
-                    ? () => Navigator.pushNamed(
-                        context,
-                        AppRoutes.voucherDetail,
-                        arguments: f.targetId,
-                      )
-                    : null,
+                subtitle: Text(f.isBrand
+                    ? 'Thương hiệu đang theo dõi'
+                    : [if (f.brandName != null) f.brandName!, if (f.salePrice != null) formatVnd(f.salePrice!)].join(' · ')),
+                trailing: const Icon(Icons.chevron_right),
+                // F06: thuong hieu -> trang thuong hieu; voucher -> chi tiet
+                onTap: () => Navigator.pushNamed(
+                  context,
+                  f.isBrand ? AppRoutes.brand : AppRoutes.voucherDetail,
+                  arguments: f.targetId,
+                ),
               ),
             );
           },

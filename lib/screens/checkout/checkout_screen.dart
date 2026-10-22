@@ -138,7 +138,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           const SizedBox(height: AppSpacing.sm),
           const Text(
             'Đơn hàng được giữ chỗ trong 15 phút. Nếu không hoàn tất thanh toán, đơn sẽ tự hủy '
-            'và trả lại tồn kho (FR-ORDER-03).',
+            'và trả lại tồn kho.',
             style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
           ),
           if (_error != null) ...[

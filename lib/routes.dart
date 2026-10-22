@@ -5,6 +5,8 @@ import 'models/campaign.dart';
 import 'models/order.dart';
 import 'providers/auth_provider.dart';
 import 'screens/auth/login_screen.dart';
+import 'screens/brand/brand_screen.dart';
+import 'screens/profile/profile_edit_screen.dart';
 import 'screens/auth/otp_verify_screen.dart';
 import 'screens/checkout/checkout_screen.dart';
 import 'screens/checkout/payment_result_screen.dart';
@@ -37,6 +39,8 @@ class AppRoutes {
   static const notificationSettings = '/notification-settings';
   static const favorites = '/favorites';
   static const walletVoucher = '/wallet-voucher';
+  static const brand = '/brand';
+  static const profileEdit = '/profile-edit';
 
   // Cac man hinh can dang nhap (protected routes - Module 10, FR-AUTH-11)
   static const protected = {
@@ -50,6 +54,7 @@ class AppRoutes {
     notificationSettings,
     favorites,
     walletVoucher,
+    profileEdit,
   };
 
   // Mo man hinh; neu can dang nhap ma dang la Guest thi chuyen sang man dang nhap
@@ -78,6 +83,8 @@ class AppRoutes {
       refundList => const RefundListScreen(),
       review => ReviewScreen(args: args as ReviewArgs),
       walletVoucher => WalletVoucherScreen(voucher: args as VoucherItem),
+      brand => BrandScreen(brandId: args as String),
+      profileEdit => const ProfileEditScreen(),
       notifications => const NotificationsScreen(),
       notificationSettings => const NotificationSettingsScreen(),
       favorites => const FavoritesScreen(),

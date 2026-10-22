@@ -4,8 +4,9 @@ import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../routes.dart';
 import '../../theme/app_theme.dart';
+import 'profile_edit_screen.dart';
 
-// FR-AUTH-05/08: ho so ca nhan, diem vao Yeu thich / Thong bao / Hoan tien, dang xuat
+// FR-AUTH-05/08: ho so ca nhan (anh dai dien, ho ten, so dien thoai, sua ho so), Yeu thich / Thong bao / Hoan tien, dang xuat
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
 
@@ -23,9 +24,11 @@ class ProfileScreen extends StatelessWidget {
               padding: const EdgeInsets.all(AppSpacing.lg),
               child: Column(
                 children: [
-                  const CircleAvatar(
+                  CircleAvatar(
                     radius: 36,
-                    child: Icon(Icons.person, size: 36),
+                    backgroundColor: AppColors.primarySoft,
+                    foregroundImage: avatarImage(user?.avatar),
+                    child: const Icon(Icons.person, size: 36, color: AppColors.primaryDark),
                   ),
                   const SizedBox(height: AppSpacing.sm),
                   Text(
@@ -40,6 +43,17 @@ class ProfileScreen extends StatelessWidget {
                       user.email,
                       style: const TextStyle(color: AppColors.textSecondary),
                     ),
+                  if (user?.phone != null && user!.phone!.isNotEmpty)
+                    Text(user.phone!, style: const TextStyle(color: AppColors.textSecondary)),
+                  if (user != null) ...[
+                    const SizedBox(height: AppSpacing.sm),
+                    OutlinedButton.icon(
+                      key: const Key('edit-profile'),
+                      onPressed: () => AppRoutes.push(context, AppRoutes.profileEdit),
+                      icon: const Icon(Icons.edit_outlined),
+                      label: const Text('Sửa hồ sơ'),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -72,7 +86,6 @@ class ProfileScreen extends StatelessWidget {
                     'Yêu cầu hoàn tiền',
                     AppRoutes.refundList,
                   ),
-                  // TODO(F17): man chinh sua ho so (ho ten, so dien thoai, anh dai dien) - FR-AUTH-05
                 ],
               ),
             ),
