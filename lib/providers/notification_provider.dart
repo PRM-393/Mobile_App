@@ -71,11 +71,16 @@ class NotificationProvider extends ChangeNotifier {
     }
   }
 
-  // Lan dau (chua co moc) chi ghi moc, khong bao lai thong bao cu
+  // Lan dau (chua co moc) chi ghi moc, khong bao lai thong bao cu.
+  // Chua co thong bao nao thi lay moc la luc nay, de thong bao dau tien den sau van duoc hien len may.
   Future<void> _showNewOnDevice(List<AppNotification> items) async {
     final prefs = _preferences;
-    if (prefs == null || items.isEmpty) return;
+    if (prefs == null) return;
     final last = prefs.lastNotifiedAt;
+    if (items.isEmpty) {
+      if (last == null) await prefs.setLastNotifiedAt(DateTime.now().toUtc());
+      return;
+    }
     final newest = items.map((n) => n.createdAt).reduce((a, b) => a.isAfter(b) ? a : b);
     if (last != null) {
       final fresh = items.where((n) => !n.isRead && n.createdAt.isAfter(last)).toList().reversed;
