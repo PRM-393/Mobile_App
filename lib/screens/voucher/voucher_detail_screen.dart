@@ -25,10 +25,16 @@ class VoucherDetailScreen extends StatefulWidget {
 
 class _VoucherDetailScreenState extends State<VoucherDetailScreen> {
   late Future<VoucherCampaign> _future;
+  bool _favorite = false;
 
   @override
   void initState() {
     super.initState();
+    if (context.read<AuthProvider>().isLoggedIn) {
+      context.read<EngageService>().isFavorite('CAMPAIGN', widget.campaignId).then((v) {
+        if (mounted) setState(() => _favorite = v);
+      }).catchError((_) {});
+    }
     _future = context.read<SearchService>().detail(
       widget.campaignId,
       lat: context.read<SearchProvider>().latitude,
@@ -43,12 +49,13 @@ class _VoucherDetailScreenState extends State<VoucherDetailScreen> {
     }
     final messenger = ScaffoldMessenger.of(context);
     try {
-      await context.read<EngageService>().toggleFavorite(
+      final favorite = await context.read<EngageService>().toggleFavorite(
         'CAMPAIGN',
         widget.campaignId,
       );
+      if (mounted) setState(() => _favorite = favorite);
       messenger.showSnackBar(
-        const SnackBar(content: Text('Đã cập nhật danh sách yêu thích')),
+        SnackBar(content: Text(favorite ? 'Đã thêm vào yêu thích' : 'Đã bỏ khỏi yêu thích')),
       );
     } catch (e) {
       messenger.showSnackBar(SnackBar(content: Text(e.toString())));
@@ -61,8 +68,9 @@ class _VoucherDetailScreenState extends State<VoucherDetailScreen> {
       title: const Text('Chi tiết voucher'),
       actions: [
         IconButton(
+          tooltip: _favorite ? 'Bỏ yêu thích' : 'Yêu thích',
           onPressed: _toggleFavorite,
-          icon: const Icon(Icons.favorite_border),
+          icon: Icon(_favorite ? Icons.favorite : Icons.favorite_border, color: _favorite ? AppColors.danger : null),
         ),
       ],
     ),
@@ -234,6 +242,24 @@ class _Detail extends StatelessWidget {
                 icon: Icons.description_outlined,
                 child: Text(c.description ?? 'Đang cập nhật.'),
               ),
+              // F06: mo trang thuong hieu
+              if (c.brandId.isNotEmpty)
+                InkWell(
+                  key: const Key('open-brand'),
+                  onTap: () => Navigator.pushNamed(context, AppRoutes.brand, arguments: c.brandId),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.storefront_outlined, size: 18, color: AppColors.primary),
+                        const SizedBox(width: 6),
+                        Text(c.brandName ?? 'Xem thương hiệu',
+                            style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600)),
+                        const Icon(Icons.chevron_right, size: 18, color: AppColors.primary),
+                      ],
+                    ),
+                  ),
+                ),
               const SizedBox(height: AppSpacing.sm),
               SectionCard(
                 title: 'Điều kiện áp dụng',

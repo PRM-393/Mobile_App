@@ -178,7 +178,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           const SizedBox(height: AppSpacing.md),
           const InfoBanner(
             'Đơn hàng được giữ chỗ trong 15 phút. Nếu không hoàn tất thanh toán, đơn sẽ tự hủy '
-            'và trả lại tồn kho (FR-ORDER-03).',
+            'và trả lại tồn kho.',
             icon: Icons.timer_outlined,
           ),
           if (_error != null) ...[

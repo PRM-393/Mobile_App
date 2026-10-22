@@ -49,6 +49,13 @@ class AuthProvider extends ChangeNotifier {
     await _setSession(session);
   }
 
+  // F17: luu thong tin ho so moi vao phien hien tai (giu nguyen token)
+  Future<void> updateUser(AuthUser user) async {
+    final current = _session;
+    if (current == null) return;
+    await _setSession(LoginResponse(accessToken: current.accessToken, refreshToken: current.refreshToken, user: user));
+  }
+
   Future<void> logout() async {
     ++_generation;
     try {

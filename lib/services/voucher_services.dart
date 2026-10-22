@@ -1,3 +1,4 @@
+import '../models/brand_page.dart';
 import '../models/campaign.dart';
 import '../models/engage.dart';
 import '../models/json_utils.dart';
@@ -6,6 +7,10 @@ import 'api_client.dart';
 
 // FR-SEARCH-*: danh muc, tim kiem / loc / gan toi, chi tiet voucher (Guest dung duoc)
 class SearchService {
+  // F06 / FR-BRAND-07: trang thuong hieu cong khai (Guest xem duoc)
+  Future<BrandPage> brandPage(String brandId) async =>
+      BrandPage.fromJson(await _api.get('/brands/$brandId/public') as Map<String, dynamic>);
+
   SearchService(this._api);
 
   final ApiClient _api;
@@ -121,8 +126,15 @@ class EngageService {
 
   final ApiClient _api;
 
-  Future<void> toggleFavorite(String targetType, String targetId) =>
-      _api.post('/favorites', body: {'targetType': targetType, 'targetId': targetId});
+  // Tra ve true neu sau khi bam dang o trang thai yeu thich / theo doi
+  Future<bool> toggleFavorite(String targetType, String targetId) async {
+    final json = await _api.post('/favorites', body: {'targetType': targetType, 'targetId': targetId});
+    return json is Map && json['favorited'] == true;
+  }
+
+  // F06: dang theo doi thuong hieu / yeu thich voucher nay chua
+  Future<bool> isFavorite(String targetType, String targetId) async =>
+      (await myFavorites()).any((f) => f.targetType == targetType && f.targetId == targetId);
 
   Future<List<Favorite>> myFavorites() async => asList(await _api.get('/favorites/me'), Favorite.fromJson);
 

@@ -90,7 +90,8 @@ ThemeData buildAppTheme() {
             fontWeight: FontWeight.w700,
             color: AppColors.textPrimary,
           ),
-          bodyMedium: const TextStyle(fontSize: 14, height: 1.45),
+          // Phai co mau: bodyMedium la kieu chu mac dinh cua moi Text, thieu mau thi chu bi trang tren nen trang
+          bodyMedium: const TextStyle(fontSize: 14, height: 1.45, color: AppColors.textPrimary),
           bodySmall: const TextStyle(
             fontSize: 12,
             color: AppColors.textSecondary,
@@ -250,8 +251,9 @@ ThemeData buildAppTheme() {
       indicatorColor: AppColors.primarySoft,
       elevation: 8,
       height: 72,
+      labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
       labelTextStyle: WidgetStatePropertyAll(
-        TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
+        TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
       ),
       iconTheme: WidgetStatePropertyAll(IconThemeData(size: 24)),
     ),

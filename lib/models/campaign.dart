@@ -57,6 +57,7 @@ class VoucherCampaign {
   const VoucherCampaign({
     required this.id,
     required this.brandId,
+    this.brandName,
     required this.title,
     required this.voucherType,
     required this.salePrice,
@@ -86,6 +87,8 @@ class VoucherCampaign {
 
   final String id;
   final String brandId;
+  // F06: ten thuong hieu (API chi tiet tra kem brand), null o danh sach
+  final String? brandName;
   final String title;
   final String? image;
   final String? description;
@@ -130,6 +133,7 @@ class VoucherCampaign {
       VoucherCampaign(
         id: json['id'] as String,
         brandId: json['brandId'] as String? ?? '',
+        brandName: json['brand'] is Map ? (json['brand'] as Map)['name'] as String? : null,
         title: json['title'] as String? ?? '',
         image: json['image'] as String?,
         description: json['description'] as String?,

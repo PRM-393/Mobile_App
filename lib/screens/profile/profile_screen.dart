@@ -5,6 +5,7 @@ import '../../providers/auth_provider.dart';
 import '../../routes.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/common.dart';
+import 'profile_edit_screen.dart';
 
 // FR-AUTH-05/08: ho so ca nhan, diem vao Yeu thich / Thong bao / Hoan tien, dang xuat
 class ProfileScreen extends StatelessWidget {
@@ -31,7 +32,11 @@ class ProfileScreen extends StatelessWidget {
                     color: Colors.white.withValues(alpha: .18),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.person, size: 34, color: Colors.white),
+                  clipBehavior: Clip.antiAlias,
+                  // F17: anh dai dien da luu (data URL), chua co thi hien bieu tuong
+                  child: avatarImage(user?.avatar) == null
+                      ? const Icon(Icons.person, size: 34, color: Colors.white)
+                      : Image(image: avatarImage(user!.avatar)!, fit: BoxFit.cover),
                 ),
                 const SizedBox(width: AppSpacing.md),
                 Expanded(
@@ -55,6 +60,8 @@ class ProfileScreen extends StatelessWidget {
                             fontSize: 13,
                           ),
                         ),
+                        if (user.phone != null && user.phone!.isNotEmpty)
+                          Text(user.phone!, style: const TextStyle(color: Color(0xFFD9FFF3), fontSize: 13)),
                       ] else
                         const Text(
                           'Đăng nhập để mua và dùng voucher',
@@ -66,6 +73,13 @@ class ProfileScreen extends StatelessWidget {
                     ],
                   ),
                 ),
+                if (user != null)
+                  IconButton(
+                    key: const Key('edit-profile'),
+                    tooltip: 'Sửa hồ sơ',
+                    onPressed: () => AppRoutes.push(context, AppRoutes.profileEdit),
+                    icon: const Icon(Icons.edit_outlined, color: Colors.white),
+                  ),
               ],
             ),
           ),
@@ -82,7 +96,7 @@ class ProfileScreen extends StatelessWidget {
                   _menu(
                     context,
                     Icons.favorite_border,
-                    'Voucher yêu thích',
+                    'Yêu thích',
                     AppRoutes.favorites,
                   ),
                   const Divider(indent: AppSpacing.md, endIndent: AppSpacing.md),
@@ -106,7 +120,8 @@ class ProfileScreen extends StatelessWidget {
                     'Yêu cầu hoàn tiền',
                     AppRoutes.refundList,
                   ),
-                  // TODO(F17): man chinh sua ho so (ho ten, so dien thoai, anh dai dien) - FR-AUTH-05
+                  const Divider(indent: AppSpacing.md, endIndent: AppSpacing.md),
+                  _menu(context, Icons.manage_accounts_outlined, 'Sửa hồ sơ', AppRoutes.profileEdit),
                 ],
               ),
             ),

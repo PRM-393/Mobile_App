@@ -142,7 +142,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Giảm đến 50% cuối tuần',
+                        'Ưu đãi từ các thương hiệu',
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 22,
