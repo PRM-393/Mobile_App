@@ -55,7 +55,10 @@ class _OtpVerifyScreenState extends State<OtpVerifyScreen> {
       _error = null;
     });
     try {
-      await context.read<AuthProvider>().verifyOtp(widget.email, _otpController.text.trim());
+      await context.read<AuthProvider>().verifyOtp(
+        widget.email,
+        _otpController.text.trim(),
+      );
       // Quay ve man hinh chinh; cac tab can dang nhap se tu hien noi dung
       if (mounted) Navigator.popUntil(context, (route) => route.isFirst);
     } catch (e) {
@@ -76,40 +79,61 @@ class _OtpVerifyScreenState extends State<OtpVerifyScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(title: const Text('Nhập mã OTP')),
-        body: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(AppSpacing.lg),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text('Mã xác thực đã được gửi tới ${widget.email}',
-                      textAlign: TextAlign.center, style: const TextStyle(color: AppColors.textSecondary)),
-                  const SizedBox(height: AppSpacing.lg),
-                  TextFormField(
-                    controller: _otpController,
-                    keyboardType: TextInputType.number,
-                    maxLength: 6,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(fontSize: 24, letterSpacing: 8, fontWeight: FontWeight.w700),
-                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                    decoration: const InputDecoration(hintText: '------', counterText: ''),
-                    validator: (v) => (v ?? '').length == 6 ? null : 'Mã OTP gồm 6 chữ số',
-                  ),
-                  if (_error != null)
-                    Text(_error!, textAlign: TextAlign.center, style: const TextStyle(color: AppColors.danger)),
-                  const SizedBox(height: AppSpacing.md),
-                  PrimaryButton(label: 'Xác nhận', loading: _loading, onPressed: _verify),
-                  TextButton(
-                    onPressed: _resendIn > 0 ? null : _resend,
-                    child: Text(_resendIn > 0 ? 'Gửi lại mã sau ${_resendIn}s' : 'Gửi lại mã'),
-                  ),
-                ],
+    appBar: AppBar(title: const Text('Nhập mã OTP')),
+    body: SafeArea(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'Mã xác thực đã được gửi tới ${widget.email}',
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: AppColors.textSecondary),
               ),
-            ),
+              const SizedBox(height: AppSpacing.lg),
+              TextFormField(
+                controller: _otpController,
+                keyboardType: TextInputType.number,
+                maxLength: 6,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 24,
+                  letterSpacing: 8,
+                  fontWeight: FontWeight.w700,
+                ),
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                decoration: const InputDecoration(
+                  hintText: '------',
+                  counterText: '',
+                ),
+                validator: (v) =>
+                    (v ?? '').length == 6 ? null : 'Mã OTP gồm 6 chữ số',
+              ),
+              if (_error != null)
+                Text(
+                  _error!,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: AppColors.danger),
+                ),
+              const SizedBox(height: AppSpacing.md),
+              PrimaryButton(
+                label: 'Xác nhận',
+                loading: _loading,
+                onPressed: _verify,
+              ),
+              TextButton(
+                onPressed: _resendIn > 0 ? null : _resend,
+                child: Text(
+                  _resendIn > 0 ? 'Gửi lại mã sau ${_resendIn}s' : 'Gửi lại mã',
+                ),
+              ),
+            ],
           ),
         ),
-      );
+      ),
+    ),
+  );
 }

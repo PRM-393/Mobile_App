@@ -74,17 +74,21 @@ class NotificationSetting {
 
 // Muc yeu thich: thuong hieu hoac chien dich (FR-ENGAGE-01)
 class Favorite {
-  const Favorite({required this.id, required this.targetType, required this.targetId});
+  const Favorite({
+    required this.id,
+    required this.targetType,
+    required this.targetId,
+  });
 
   final String id;
   final String targetType;
   final String targetId;
 
   factory Favorite.fromJson(Map<String, dynamic> json) => Favorite(
-        id: json['id'] as String,
-        targetType: json['targetType'] as String? ?? 'CAMPAIGN',
-        targetId: json['targetId'] as String? ?? '',
-      );
+    id: json['id'] as String,
+    targetType: json['targetType'] as String? ?? 'CAMPAIGN',
+    targetId: json['targetId'] as String? ?? '',
+  );
 }
 
 // Danh gia cong khai cua chien dich (FR-ENGAGE-02..04): ten nguoi danh gia da duoc may chu che bot

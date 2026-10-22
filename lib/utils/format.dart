@@ -1,6 +1,10 @@
 import 'package:intl/intl.dart';
 
-final _vnd = NumberFormat.currency(locale: 'vi_VN', symbol: '₫', decimalDigits: 0);
+final _vnd = NumberFormat.currency(
+  locale: 'vi_VN',
+  symbol: '₫',
+  decimalDigits: 0,
+);
 final _dateTime = DateFormat('dd/MM/yyyy HH:mm');
 
 // Dinh dang tien te VND, khong co phan thap phan - CON-06, NFR-USA-04

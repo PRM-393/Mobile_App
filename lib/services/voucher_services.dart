@@ -10,33 +10,50 @@ class SearchService {
 
   final ApiClient _api;
 
-  Future<List<Category>> categories() async => asList(await _api.get('/categories'), Category.fromJson);
+  Future<List<Category>> categories() async =>
+      asList(await _api.get('/categories'), Category.fromJson);
 
   Future<SearchResult> search({
     String? keyword,
     String? categoryId,
     String? sort,
+    int? minPrice,
+    maxPrice,
+    double? minDiscount,
+    maxDiscount,
+    bool locationDenied = false,
     double? lat,
     double? lng,
     int? radiusKm,
     int page = 1,
     int pageSize = 20,
   }) async {
-    final json = await _api.get('/vouchers', query: {
-      'keyword': keyword,
-      'categoryId': categoryId,
-      'sort': sort,
-      'lat': lat,
-      'lng': lng,
-      'radiusKm': radiusKm,
-      'page': page,
-      'pageSize': pageSize,
-    });
+    final json = await _api.get(
+      '/vouchers',
+      query: {
+        'keyword': keyword,
+        'categoryId': categoryId,
+        'sort': sort,
+        'minPrice': minPrice,
+        'maxPrice': maxPrice,
+        'minDiscount': minDiscount,
+        'maxDiscount': maxDiscount,
+        'locationDenied': locationDenied,
+        'lat': lat,
+        'lng': lng,
+        'radiusKm': radiusKm,
+        'page': page,
+        'pageSize': pageSize,
+      },
+    );
     return SearchResult.fromJson(json as Map<String, dynamic>);
   }
 
-  Future<VoucherCampaign> detail(String id) async =>
-      VoucherCampaign.fromJson(await _api.get('/vouchers/$id') as Map<String, dynamic>);
+  Future<VoucherCampaign> detail(String id, {double? lat, double? lng}) async =>
+      VoucherCampaign.fromJson(
+        await _api.get('/vouchers/$id', query: {'lat': lat, 'lng': lng})
+            as Map<String, dynamic>,
+      );
 }
 
 // FR-ORDER-*: tao don (giu ton kho 15 phut) va lich su don hang; FR-REDEEM-01: vi voucher

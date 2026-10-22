@@ -12,16 +12,24 @@ class PreferencesService {
   static const _recentKeywordsKey = 'recent_keywords';
   static const _lastNotifiedKey = 'last_notified_at';
 
-  static Future<PreferencesService> create() async => PreferencesService(await SharedPreferences.getInstance());
+  static Future<PreferencesService> create() async =>
+      PreferencesService(await SharedPreferences.getInstance());
 
   // ---- Tu khoa tim kiem gan day: moi nhat dung dau, khong trung, toi da 8 ----
-  List<String> get recentKeywords => _prefs.getStringList(_recentKeywordsKey) ?? const [];
+  List<String> get recentKeywords =>
+      _prefs.getStringList(_recentKeywordsKey) ?? const [];
 
   Future<void> addRecentKeyword(String keyword) async {
     final k = keyword.trim();
     if (k.isEmpty) return;
-    final list = [k, ...recentKeywords.where((e) => e.toLowerCase() != k.toLowerCase())];
-    await _prefs.setStringList(_recentKeywordsKey, list.take(maxRecentKeywords).toList());
+    final list = [
+      k,
+      ...recentKeywords.where((e) => e.toLowerCase() != k.toLowerCase()),
+    ];
+    await _prefs.setStringList(
+      _recentKeywordsKey,
+      list.take(maxRecentKeywords).toList(),
+    );
   }
 
   Future<void> clearRecentKeywords() => _prefs.remove(_recentKeywordsKey);

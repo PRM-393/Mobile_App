@@ -8,7 +8,11 @@ import '../services/token_storage.dart';
 // Trang thai dang nhap toan ung dung (Provider + ChangeNotifier - Module 5).
 // Tu dang nhap lai bang refresh token da luu (FR-AUTH-03), khong co "thiet bi tin cay" (BR-23).
 class AuthProvider extends ChangeNotifier {
-  AuthProvider({required ApiClient api, required this._authService, required this._storage}) {
+  AuthProvider({
+    required ApiClient api,
+    required this._authService,
+    required this._storage,
+  }) {
     api.accessTokenGetter = () => _session?.accessToken;
     api.onUnauthorized = _refreshSession;
   }
@@ -19,6 +23,7 @@ class AuthProvider extends ChangeNotifier {
   LoginResponse? _session;
   bool _isHydrated = false;
   Future<bool>? _refreshing;
+  int _generation = 0;
 
   AuthUser? get user => _session?.user;
   bool get isLoggedIn => _session != null;
@@ -38,11 +43,14 @@ class AuthProvider extends ChangeNotifier {
   Future<void> requestOtp(String email) => _authService.requestOtp(email);
 
   Future<void> verifyOtp(String email, String otp) async {
+    final generation = ++_generation;
     final session = await _authService.verifyOtp(email, otp);
+    if (generation != _generation) return;
     await _setSession(session);
   }
 
   Future<void> logout() async {
+    ++_generation;
     try {
       await _authService.logout();
     } catch (_) {
@@ -65,14 +73,18 @@ class AuthProvider extends ChangeNotifier {
 
   // Goi tu ApiClient khi gap 401: lam moi token mot lan, cac request dong thoi dung chung ket qua
   Future<bool> _refreshSession() {
+    if (_session == null) return Future.value(false);
     return _refreshing ??= () async {
+      final generation = _generation;
       final refreshToken = _session?.refreshToken;
       if (refreshToken == null) return false;
       try {
-        await _setSession(await _authService.refresh(refreshToken));
+        final session = await _authService.refresh(refreshToken);
+        if (generation != _generation) return false;
+        await _setSession(session);
         return true;
       } catch (_) {
-        await _clearSession();
+        if (generation == _generation) await _clearSession();
         return false;
       } finally {
         _refreshing = null;

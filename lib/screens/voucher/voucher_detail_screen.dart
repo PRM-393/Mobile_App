@@ -7,6 +7,8 @@ import '../../routes.dart';
 import '../../services/voucher_services.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/distance.dart';
+import '../../providers/search_provider.dart';
+import '../search/store_map_screen.dart';
 import '../../utils/format.dart';
 import '../../widgets/common.dart';
 import '../engage/campaign_reviews_section.dart';
@@ -27,7 +29,11 @@ class _VoucherDetailScreenState extends State<VoucherDetailScreen> {
   @override
   void initState() {
     super.initState();
-    _future = context.read<SearchService>().detail(widget.campaignId);
+    _future = context.read<SearchService>().detail(
+      widget.campaignId,
+      lat: context.read<SearchProvider>().latitude,
+      lng: context.read<SearchProvider>().longitude,
+    );
   }
 
   Future<void> _toggleFavorite() async {
@@ -37,8 +43,13 @@ class _VoucherDetailScreenState extends State<VoucherDetailScreen> {
     }
     final messenger = ScaffoldMessenger.of(context);
     try {
-      await context.read<EngageService>().toggleFavorite('CAMPAIGN', widget.campaignId);
-      messenger.showSnackBar(const SnackBar(content: Text('Đã cập nhật danh sách yêu thích')));
+      await context.read<EngageService>().toggleFavorite(
+        'CAMPAIGN',
+        widget.campaignId,
+      );
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Đã cập nhật danh sách yêu thích')),
+      );
     } catch (e) {
       messenger.showSnackBar(SnackBar(content: Text(e.toString())));
     }
@@ -46,19 +57,26 @@ class _VoucherDetailScreenState extends State<VoucherDetailScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(
-          title: const Text('Chi tiết voucher'),
-          actions: [IconButton(onPressed: _toggleFavorite, icon: const Icon(Icons.favorite_border))],
+    appBar: AppBar(
+      title: const Text('Chi tiết voucher'),
+      actions: [
+        IconButton(
+          onPressed: _toggleFavorite,
+          icon: const Icon(Icons.favorite_border),
         ),
-        body: FutureBuilder<VoucherCampaign>(
-          future: _future,
-          builder: (context, snap) {
-            if (snap.connectionState != ConnectionState.done) return const LoadingState();
-            if (snap.hasError) return ErrorState(snap.error.toString());
-            return _Detail(campaign: snap.data!);
-          },
-        ),
-      );
+      ],
+    ),
+    body: FutureBuilder<VoucherCampaign>(
+      future: _future,
+      builder: (context, snap) {
+        if (snap.connectionState != ConnectionState.done) {
+          return const LoadingState();
+        }
+        if (snap.hasError) return ErrorState(snap.error.toString());
+        return _Detail(campaign: snap.data!);
+      },
+    ),
+  );
 }
 
 class _Detail extends StatelessWidget {
@@ -69,7 +87,11 @@ class _Detail extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = campaign;
-    final canBuy = c.availableQuantity > 0 && c.status == 'PUBLISHED' && DateTime.now().isBefore(c.saleEndAt);
+    final canBuy =
+        c.availableQuantity > 0 &&
+        c.status == 'PUBLISHED' &&
+        !DateTime.now().isBefore(c.saleStartAt) &&
+        DateTime.now().isBefore(c.saleEndAt);
     return Column(
       children: [
         Expanded(
@@ -81,33 +103,106 @@ class _Detail extends StatelessWidget {
                 child: AspectRatio(
                   aspectRatio: 16 / 9,
                   child: c.image == null || c.image!.isEmpty
-                      ? Container(color: AppColors.border, child: const Icon(Icons.local_offer_outlined, size: 48))
+                      ? Container(
+                          color: AppColors.border,
+                          child: const Icon(
+                            Icons.local_offer_outlined,
+                            size: 48,
+                          ),
+                        )
                       // Module 12: giai ma anh theo be rong man hinh
-                      : Image.network(c.image!,
+                      : Image.network(
+                          c.image!,
                           fit: BoxFit.cover,
-                          cacheWidth: (MediaQuery.sizeOf(context).width * MediaQuery.devicePixelRatioOf(context)).round(),
-                          errorBuilder: (_, _, _) => Container(color: AppColors.border)),
+                          cacheWidth:
+                              (MediaQuery.sizeOf(context).width *
+                                      MediaQuery.devicePixelRatioOf(context))
+                                  .round(),
+                          errorBuilder: (_, _, _) =>
+                              Container(color: AppColors.border),
+                        ),
                 ),
               ),
               const SizedBox(height: AppSpacing.md),
-              Text(c.title, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
-              Text(voucherTypeLabels[c.voucherType] ?? c.voucherType, style: const TextStyle(color: AppColors.textSecondary)),
+              Text(
+                c.title,
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              Text(
+                voucherTypeLabels[c.voucherType] ?? c.voucherType,
+                style: const TextStyle(color: AppColors.textSecondary),
+              ),
               const SizedBox(height: AppSpacing.sm),
-              Text(formatVnd(c.salePrice),
-                  style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: AppColors.primary)),
-              Text('Giá trị: ${formatVnd(c.faceValue)}', style: const TextStyle(color: AppColors.textSecondary)),
-              Text('Còn lại: ${c.availableQuantity} voucher', style: const TextStyle(color: AppColors.textSecondary)),
+              Text(
+                formatVnd(c.salePrice),
+                style: const TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.primary,
+                ),
+              ),
+              Text(
+                'Giá trị: ${formatVnd(c.faceValue)}',
+                style: const TextStyle(color: AppColors.textSecondary),
+              ),
+              Text(
+                'Còn lại: ${c.availableQuantity} voucher',
+                style: const TextStyle(color: AppColors.textSecondary),
+              ),
               const SizedBox(height: AppSpacing.md),
-              SectionCard(title: 'Điều kiện áp dụng', child: Text(c.terms ?? c.description ?? 'Đang cập nhật.')),
+              SectionCard(
+                title: 'Điều kiện áp dụng',
+                child: Text(c.terms ?? c.description ?? 'Đang cập nhật.'),
+              ),
               const SizedBox(height: AppSpacing.sm),
-              SectionCard(title: 'Hạn sử dụng', child: Text(formatDateTime(c.voucherExpireAt))),
+              SectionCard(
+                title: 'Hạn sử dụng',
+                child: Text(formatDateTime(c.voucherExpireAt)),
+              ),
               const SizedBox(height: AppSpacing.sm),
-              const SectionCard(
+              SectionCard(
                 title: 'Chính sách hoàn tiền',
-                child: Text('Được hoàn tiền trong 7 ngày kể từ khi mua nếu chưa sử dụng '
-                    'và còn ít nhất 3 ngày trước hạn sử dụng (BR-05).'),
+                child: Text(
+                  c.refundDescription ?? 'Chưa tải được chính sách hoàn tiền. Vui lòng thử lại sau.',
+                ),
+              ),
+              SectionCard(
+                title: 'Đánh giá (${c.reviewCount})',
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      c.reviewCount == 0
+                          ? 'Chưa có đánh giá.'
+                          : '${c.averageRating.toStringAsFixed(1)}/5 sao',
+                    ),
+                    for (final review in c.reviews)
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(
+                          '${review['rating']}/5 · ${review['comment'] ?? ''}',
+                        ),
+                        subtitle: review['brandReply'] == null
+                            ? null
+                            : Text('Phản hồi: ${review['brandReply']}'),
+                      ),
+                  ],
+                ),
               ),
               if (c.stores.isNotEmpty) ...[
+                OutlinedButton.icon(
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => StoreMapScreen(stores: c.stores),
+                    ),
+                  ),
+                  icon: const Icon(Icons.map_outlined),
+                  label: const Text('Xem bản đồ và chỉ đường'),
+                ),
                 const SizedBox(height: AppSpacing.sm),
                 SectionCard(
                   title: 'Chi nhánh áp dụng',
@@ -121,7 +216,9 @@ class _Detail extends StatelessWidget {
                           leading: const Icon(Icons.store_outlined),
                           title: Text(s.name),
                           subtitle: Text(s.address),
-                          trailing: s.distanceKm == null ? null : Text(formatDistance(s.distanceKm!)),
+                          trailing: s.distanceKm == null
+                              ? null
+                              : Text(formatDistance(s.distanceKm!)),
                         ),
                     ],
                   ),
@@ -137,7 +234,13 @@ class _Detail extends StatelessWidget {
             padding: const EdgeInsets.all(AppSpacing.md),
             child: PrimaryButton(
               label: canBuy ? 'Mua ngay' : 'Hết hàng / ngừng bán',
-              onPressed: canBuy ? () => AppRoutes.push(context, AppRoutes.checkout, arguments: c) : null,
+              onPressed: canBuy
+                  ? () => AppRoutes.push(
+                      context,
+                      AppRoutes.checkout,
+                      arguments: c,
+                    )
+                  : null,
             ),
           ),
         ),

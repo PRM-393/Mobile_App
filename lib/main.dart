@@ -22,7 +22,11 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   final api = ApiClient(baseUrl: Env.apiBaseUrl);
-  final auth = AuthProvider(api: api, authService: AuthService(api), storage: TokenStorage());
+  final auth = AuthProvider(
+    api: api,
+    authService: AuthService(api, deviceId: TokenStorage().deviceId),
+    storage: TokenStorage(),
+  );
   final notifications = NotificationService();
   final preferences = await PreferencesService.create();
   await Future.wait([auth.hydrate(), notifications.init()]);
@@ -75,10 +79,10 @@ class VoucherApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => MaterialApp(
-        title: 'Voucher Platform',
-        debugShowCheckedModeBanner: false,
-        theme: buildAppTheme(),
-        initialRoute: AppRoutes.main,
-        onGenerateRoute: AppRoutes.onGenerateRoute,
-      );
+    title: 'Voucher Platform',
+    debugShowCheckedModeBanner: false,
+    theme: buildAppTheme(),
+    initialRoute: AppRoutes.main,
+    onGenerateRoute: AppRoutes.onGenerateRoute,
+  );
 }

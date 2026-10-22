@@ -6,7 +6,12 @@ import '../theme/app_theme.dart';
 
 // Dem nguoc hieu luc token QR (60 giay) - FR-REDEEM-02; goi onExpire khi het han de lam moi ma
 class CountdownTimer extends StatefulWidget {
-  const CountdownTimer({super.key, required this.expiresAt, this.onExpire, this.now = DateTime.now});
+  const CountdownTimer({
+    super.key,
+    required this.expiresAt,
+    this.onExpire,
+    this.now = DateTime.now,
+  });
 
   final DateTime expiresAt;
   final VoidCallback? onExpire;
@@ -58,12 +63,12 @@ class _CountdownTimerState extends State<CountdownTimer> {
 
   @override
   Widget build(BuildContext context) => Text(
-        _remaining > 0 ? 'Còn hiệu lực ${_remaining}s' : 'Đã hết hạn',
-        textAlign: TextAlign.center,
-        style: TextStyle(
-          fontSize: 16,
-          fontWeight: FontWeight.w700,
-          color: _remaining <= 10 ? AppColors.danger : AppColors.textPrimary,
-        ),
-      );
+    _remaining > 0 ? 'Còn hiệu lực ${_remaining}s' : 'Đã hết hạn',
+    textAlign: TextAlign.center,
+    style: TextStyle(
+      fontSize: 16,
+      fontWeight: FontWeight.w700,
+      color: _remaining <= 10 ? AppColors.danger : AppColors.textPrimary,
+    ),
+  );
 }
