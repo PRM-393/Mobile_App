@@ -4,4 +4,6 @@
          to allow setting breakpoints, to provide hot reload, etc.
     -->
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- Chi ban debug: cho phep goi BE demo qua http trong mang LAN (ban release van bat buoc https) -->
+    <application android:usesCleartextTraffic="true"/>
 </manifest>
