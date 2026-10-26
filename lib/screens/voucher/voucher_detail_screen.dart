@@ -237,29 +237,32 @@ class _Detail extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+              // F06: the thuong hieu, bam de mo trang thuong hieu
+              if (c.brandId.isNotEmpty) ...[
+                SectionCard(
+                  title: 'Thương hiệu',
+                  icon: Icons.storefront_outlined,
+                  child: InkWell(
+                    key: const Key('open-brand'),
+                    onTap: () => Navigator.pushNamed(context, AppRoutes.brand, arguments: c.brandId),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(c.brandName ?? 'Xem thương hiệu',
+                              style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600)),
+                        ),
+                        const Icon(Icons.chevron_right, color: AppColors.primary),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+              ],
               SectionCard(
                 title: 'Mô tả ưu đãi',
                 icon: Icons.description_outlined,
                 child: Text(c.description ?? 'Đang cập nhật.'),
               ),
-              // F06: mo trang thuong hieu
-              if (c.brandId.isNotEmpty)
-                InkWell(
-                  key: const Key('open-brand'),
-                  onTap: () => Navigator.pushNamed(context, AppRoutes.brand, arguments: c.brandId),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.storefront_outlined, size: 18, color: AppColors.primary),
-                        const SizedBox(width: 6),
-                        Text(c.brandName ?? 'Xem thương hiệu',
-                            style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600)),
-                        const Icon(Icons.chevron_right, size: 18, color: AppColors.primary),
-                      ],
-                    ),
-                  ),
-                ),
               const SizedBox(height: AppSpacing.sm),
               SectionCard(
                 title: 'Điều kiện áp dụng',

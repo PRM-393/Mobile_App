@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../config/env.dart';
 import '../../providers/auth_provider.dart';
 import '../../routes.dart';
 import '../../theme/app_theme.dart';
@@ -12,7 +13,7 @@ final _emailPattern = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
 String? validateEmail(String? value) {
   final v = value?.trim() ?? '';
   if (v.isEmpty) return 'Vui lòng nhập email';
-  if (!_emailPattern.hasMatch(v)) return 'Email không hợp lệ';
+  if (!Env.demoLogin && !_emailPattern.hasMatch(v)) return 'Email không hợp lệ';
   return null;
 }
 

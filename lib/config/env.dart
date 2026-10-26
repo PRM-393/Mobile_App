@@ -10,6 +10,9 @@ class Env {
 
   static const defaultBackend = 'https://voucher-platform-api.onrender.com/api';
 
+  // Chi de demo local: --dart-define=DEMO_LOGIN=true cho phep nhap ten ngan (admin, owner, staff, user) va mat khau 123.
+  static const bool demoLogin = bool.fromEnvironment('DEMO_LOGIN');
+
   static const String apiBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
     defaultValue: defaultBackend,
