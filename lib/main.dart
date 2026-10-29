@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import 'config/env.dart';
 import 'providers/auth_provider.dart';
+import 'providers/favorite_provider.dart';
 import 'providers/main_tab_controller.dart';
 import 'providers/notification_provider.dart';
 import 'providers/search_provider.dart';
@@ -37,6 +38,8 @@ Future<void> main() async {
   final engageService = EngageService(api);
   // F16: thong bao may chu, hien thanh thong bao cuc bo khi app dang mo
   final notificationProvider = NotificationProvider(engageService, local: notifications, preferences: preferences);
+  // F06: yeu thich / theo doi giu o mot cho de moi man doc chung (xem favorite_provider.dart)
+  final favoriteProvider = FavoriteProvider(engageService);
   // F10: vi luu SQLite de xem khi mat mang (NFR-MOB-12)
   final walletProvider = WalletProvider(orderService, cache: SqliteWalletCache());
 
@@ -49,6 +52,8 @@ Future<void> main() async {
       notificationProvider.stopPolling();
       preferences.clearUserData();
       walletProvider.clear();
+      // F06: khong de danh sach yeu thich cua tai khoan cu con lai cho nguoi dang nhap sau
+      favoriteProvider.clear();
     }
     wasLoggedIn = auth.isLoggedIn;
   });
@@ -70,6 +75,7 @@ Future<void> main() async {
         ChangeNotifierProvider(create: (_) => SearchProvider(searchService, preferences: preferences)),
         ChangeNotifierProvider.value(value: walletProvider),
         ChangeNotifierProvider.value(value: notificationProvider),
+        ChangeNotifierProvider.value(value: favoriteProvider),
       ],
       child: const VoucherApp(),
     ),

@@ -132,7 +132,9 @@ class EngageService {
     return json is Map && json['favorited'] == true;
   }
 
-  // F06: dang theo doi thuong hieu / yeu thich voucher nay chua
+  // F06: dang theo doi thuong hieu / yeu thich voucher nay chua.
+  // Ham nay tai TOAN BO danh sach yeu thich chi de kiem mot muc, nen man hinh khong dung nua -
+  // doc qua FavoriteProvider (tai mot lan, dung chung ca app). Giu lai cho test tich hop that.
   Future<bool> isFavorite(String targetType, String targetId) async =>
       (await myFavorites()).any((f) => f.targetType == targetType && f.targetId == targetId);
 
