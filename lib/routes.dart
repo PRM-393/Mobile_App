@@ -7,7 +7,7 @@ import 'providers/auth_provider.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/brand/brand_screen.dart';
 import 'screens/profile/profile_edit_screen.dart';
-import 'screens/auth/otp_verify_screen.dart';
+import 'screens/auth/forgot_password_screen.dart';
 import 'screens/checkout/checkout_screen.dart';
 import 'screens/checkout/payment_result_screen.dart';
 import 'screens/engage/favorites_screen.dart';
@@ -27,7 +27,7 @@ class AppRoutes {
 
   static const main = '/';
   static const login = '/login';
-  static const otp = '/otp';
+  static const forgotPassword = '/forgot-password';
   static const voucherDetail = '/voucher';
   static const checkout = '/checkout';
   static const paymentResult = '/payment-result';
@@ -74,7 +74,7 @@ class AppRoutes {
     final Widget page = switch (settings.name) {
       main => const MainShell(),
       login => const LoginScreen(),
-      otp => OtpVerifyScreen(email: args as String),
+      forgotPassword => ForgotPasswordScreen(email: args as String),
       voucherDetail => VoucherDetailScreen(campaignId: args as String),
       checkout => CheckoutScreen(campaign: args as VoucherCampaign),
       paymentResult => PaymentResultScreen(args: args as PaymentResultArgs),

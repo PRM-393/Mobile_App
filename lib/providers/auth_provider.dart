@@ -5,6 +5,13 @@ import '../services/api_client.dart';
 import '../services/auth_service.dart';
 import '../services/token_storage.dart';
 
+class WrongAppException implements Exception {
+  const WrongAppException();
+
+  @override
+  String toString() => 'Tài khoản này dành cho trang web quản lý. Ứng dụng chỉ dành cho khách hàng.';
+}
+
 // Trang thai dang nhap toan ung dung (Provider + ChangeNotifier - Module 5).
 // Tu dang nhap lai bang refresh token da luu (FR-AUTH-03), khong co "thiet bi tin cay" (BR-23).
 class AuthProvider extends ChangeNotifier {
@@ -40,12 +47,26 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> requestOtp(String email) => _authService.requestOtp(email);
+  Future<bool> isRegistered(String email) => _authService.isRegistered(email);
 
-  Future<void> verifyOtp(String email, String otp) async {
+  Future<void> login(String email, String password) => _start(() => _authService.login(email, password));
+
+  Future<void> register(String email, String password, {String? fullName}) =>
+      _start(() => _authService.register(email, password, fullName: fullName));
+
+  Future<void> requestResetCode(String email) => _authService.requestResetCode(email);
+
+  Future<void> resetPassword(String email, String code, String password) =>
+      _authService.resetPassword(email, code, password);
+
+  // App chi danh cho khach hang (FR-AUTH-07): tai khoan web (chu thuong hieu, nhan vien, quan tri) bi tu choi.
+  Future<void> _start(Future<LoginResponse> Function() request) async {
     final generation = ++_generation;
-    final session = await _authService.verifyOtp(email, otp);
+    final session = await request();
     if (generation != _generation) return;
+    if (session.user.role != 'CUSTOMER') {
+      throw const WrongAppException();
+    }
     await _setSession(session);
   }
 
