@@ -2,14 +2,40 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../providers/auth_provider.dart';
+import '../../services/profile_service.dart';
 import '../../routes.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/common.dart';
 import 'profile_edit_screen.dart';
 
 // FR-AUTH-05/08: ho so ca nhan, diem vao Yeu thich / Thong bao / Hoan tien, dang xuat
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
+
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  @override
+  void initState() {
+    super.initState();
+    _refreshProfile();
+  }
+
+  // F17 / FR-AUTH-05: man nay truoc day chi doc ho so tu phien da luu tren may, nen sua ho so o thiet bi
+  // khac (hoac xoa anh dai dien) thi may nay van hien du lieu cu cho toi khi dang nhap lai.
+  // Doc lai GET /users/me moi lan mo man; loi mang thi giu nguyen du lieu da luu, khong lam trong man hinh.
+  Future<void> _refreshProfile() async {
+    final auth = context.read<AuthProvider>();
+    if (!auth.isLoggedIn) return;
+    try {
+      final fresh = await context.read<ProfileService>().me();
+      if (mounted) await auth.updateUser(fresh);
+    } catch (_) {
+      // dang hien ho so cu, khong co gi de bao them
+    }
+  }
 
   @override
   Widget build(BuildContext context) {

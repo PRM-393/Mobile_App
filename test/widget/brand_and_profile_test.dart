@@ -6,9 +6,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:voucher_platform_mobile/providers/auth_provider.dart';
+import 'package:voucher_platform_mobile/providers/favorite_provider.dart';
 import 'package:voucher_platform_mobile/screens/brand/brand_screen.dart';
 import 'package:voucher_platform_mobile/screens/engage/favorites_screen.dart';
 import 'package:voucher_platform_mobile/screens/profile/profile_edit_screen.dart';
+import 'package:voucher_platform_mobile/screens/profile/profile_screen.dart';
 import 'package:voucher_platform_mobile/services/auth_service.dart';
 import 'package:voucher_platform_mobile/services/profile_service.dart';
 import 'package:voucher_platform_mobile/services/voucher_services.dart';
@@ -42,11 +44,15 @@ Future<FakeApi> _pump(WidgetTester tester, Widget screen, Map<String, FakeRespon
   final client = api.client();
   final auth = AuthProvider(api: client, authService: AuthService(client), storage: LoggedInTokenStorage());
   await auth.hydrate();
+  // F06: yeu thich / theo doi dung chung mot FavoriteProvider nhu trong main.dart
+  final engage = EngageService(client);
+  final favorites = FavoriteProvider(engage);
   await tester.pumpWidget(MultiProvider(
     providers: [
       ChangeNotifierProvider.value(value: auth),
       Provider.value(value: SearchService(client)),
-      Provider.value(value: EngageService(client)),
+      Provider.value(value: engage),
+      ChangeNotifierProvider.value(value: favorites),
       Provider.value(value: ProfileService(client)),
     ],
     child: MaterialApp(home: screen),
@@ -85,19 +91,63 @@ void main() {
     });
   });
 
-  testWidgets('Yeu thich hien ten that, thuong hieu va voucher', (tester) async {
+  // Man "Yeu thich" tach lam 2 tab: theo doi thuong hieu va yeu thich voucher (FR-ENGAGE-01)
+  testWidgets('Yeu thich hien ten that, tach tab thuong hieu va voucher', (tester) async {
     await _pump(tester, const FavoritesScreen(), {
       'GET /favorites/me': (_) => const FakeResponse.ok([
             {'id': 'f1', 'targetType': 'BRAND', 'targetId': 'b1', 'title': 'Highlands Coffee'},
             {'id': 'f2', 'targetType': 'CAMPAIGN', 'targetId': 'c1', 'title': 'Voucher 100K', 'brandName': 'Highlands Coffee', 'salePrice': 80000},
           ]),
     });
+
+    // Tab dau: thuong hieu dang theo doi
+    expect(find.text('Thương hiệu (1)'), findsOneWidget);
+    expect(find.text('Voucher (1)'), findsOneWidget);
     expect(find.text('Highlands Coffee'), findsOneWidget);
     expect(find.text('Thương hiệu đang theo dõi'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('tab-campaigns')));
+    await tester.pumpAndSettle();
     expect(find.text('Voucher 100K'), findsOneWidget);
     expect(find.textContaining('Highlands Coffee · 80.000'), findsOneWidget);
+    // Ma noi bo khong duoc lo ra giao dien
     expect(find.textContaining('c1'), findsNothing);
   });
+
+  testWidgets('Bo theo doi ngay tren danh sach, co hoan tac (FR-ENGAGE-01)', (tester) async {
+    var favorites = [
+      {'id': 'f1', 'targetType': 'BRAND', 'targetId': 'b1', 'title': 'Highlands Coffee'},
+    ];
+    final api = await _pump(tester, const FavoritesScreen(), {
+      'GET /favorites/me': (_) => FakeResponse.ok(favorites),
+      'POST /favorites': (_) {
+        favorites = const [];
+        return const FakeResponse.ok({'favorited': false});
+      },
+    });
+
+    expect(find.text('Highlands Coffee'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('remove-f1')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Highlands Coffee'), findsNothing);
+    expect(find.text('Thương hiệu (0)'), findsOneWidget);
+    expect(find.textContaining('Đã bỏ theo dõi'), findsOneWidget);
+    expect(find.text('Hoàn tác'), findsOneWidget);
+    final body = jsonDecode(api.calls('POST', '/favorites').single.body) as Map;
+    expect(body, {'targetType': 'BRAND', 'targetId': 'b1'});
+  });
+
+  testWidgets('Chua theo doi thuong hieu nao thi noi ro lam gi tiep theo', (tester) async {
+    await _pump(tester, const FavoritesScreen(), {
+      'GET /favorites/me': (_) => const FakeResponse.ok([]),
+    });
+
+    expect(find.text('Chưa theo dõi thương hiệu nào'), findsOneWidget);
+    expect(find.textContaining('nhận thông báo khi có ưu đãi mới'), findsOneWidget);
+  });
+
+  group('F17 ho so: lam tuoi tu may chu', _profileRefreshTests);
 
   group('F17 sua ho so', () {
     test('validator ho ten, so dien thoai, anh dai dien', () {
@@ -153,5 +203,37 @@ void main() {
       expect(sent!['phone'], '0901234567');
       expect(sent!['avatar'], 'data:image/png;base64,$_png');
     });
+  });
+}
+
+// F17 / FR-AUTH-05: man "Ca nhan" truoc day chi doc ho so tu phien da luu tren may, nen sua ho so o
+// thiet bi khac thi may nay van hien du lieu cu. Nay doc lai GET /users/me moi lan mo man.
+void _profileRefreshTests() {
+  testWidgets('mo man Ca nhan thi doc lai ho so tu may chu va hien du lieu moi', (tester) async {
+    final api = await _pump(tester, const ProfileScreen(), {
+      'GET /users/me': (_) => const FakeResponse.ok({
+            'id': 'u1',
+            'email': 'khach@voucher.local',
+            'role': 'CUSTOMER',
+            'fullName': 'Nguyễn Văn A',
+            'phone': '0901234567',
+          }),
+    });
+
+    expect(api.calls('GET', '/users/me'), hasLength(1));
+    // Ten trong phien da luu la "Khach"; sau khi doc lai phai hien ten moi
+    expect(find.text('Nguyễn Văn A'), findsOneWidget);
+    expect(find.text('0901234567'), findsOneWidget);
+    expect(find.text('Khách'), findsNothing);
+  });
+
+  testWidgets('may chu loi thi van hien ho so da luu, khong lam trong man hinh', (tester) async {
+    await _pump(tester, const ProfileScreen(), {
+      'GET /users/me': (_) => const FakeResponse.error(500, 'Lỗi máy chủ'),
+    });
+
+    expect(find.text('Khách'), findsOneWidget);
+    // Van o nhanh "da dang nhap": menu ca nhan hien binh thuong
+    expect(find.text('Yêu thích'), findsOneWidget);
   });
 }

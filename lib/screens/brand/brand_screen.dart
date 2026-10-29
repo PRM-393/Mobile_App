@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../models/brand_page.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/favorite_provider.dart';
 import '../../routes.dart';
 import '../../services/voucher_services.dart';
 import '../../theme/app_theme.dart';
@@ -22,23 +23,16 @@ class BrandScreen extends StatefulWidget {
 
 class _BrandScreenState extends State<BrandScreen> {
   late Future<BrandPage> _future;
-  bool _following = false;
   bool _busy = false;
 
   @override
   void initState() {
     super.initState();
     _future = context.read<SearchService>().brandPage(widget.brandId);
-    _loadFollowing();
-  }
-
-  Future<void> _loadFollowing() async {
-    if (!context.read<AuthProvider>().isLoggedIn) return;
-    try {
-      final following = await context.read<EngageService>().isFavorite('BRAND', widget.brandId);
-      if (mounted) setState(() => _following = following);
-    } catch (_) {
-      // khong lay duoc trang thai thi coi nhu chua theo doi
+    // Trang thai theo doi doc tu FavoriteProvider (tai mot lan, dung chung ca app) thay vi goi
+    // isFavorite() - ham do tai toan bo danh sach yeu thich chi de kiem mot muc.
+    if (context.read<AuthProvider>().isLoggedIn) {
+      context.read<FavoriteProvider>().ensureLoaded();
     }
   }
 
@@ -54,10 +48,9 @@ class _BrandScreenState extends State<BrandScreen> {
     }
     setState(() => _busy = true);
     try {
-      final following = await context.read<EngageService>().toggleFavorite('BRAND', brand.id);
+      final following = await context.read<FavoriteProvider>().toggle('BRAND', brand.id);
       if (!mounted) return;
       setState(() {
-        _following = following;
         _future = Future.value(brand.withFollowers((brand.followerCount + (following ? 1 : -1)).clamp(0, 1 << 30)));
       });
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -130,7 +123,8 @@ class _BrandScreenState extends State<BrandScreen> {
                           const SizedBox(height: AppSpacing.md),
                           SizedBox(
                             width: double.infinity,
-                            child: _following
+                            // watch: bo theo doi o man Yeu thich thi nut o day doi theo ngay
+                            child: context.watch<FavoriteProvider>().isFavorite('BRAND', widget.brandId)
                                 ? OutlinedButton.icon(
                                     key: const Key('follow-button'),
                                     onPressed: _busy ? null : () => _toggleFollow(b),

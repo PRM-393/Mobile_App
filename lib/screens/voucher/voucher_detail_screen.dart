@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../models/campaign.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/favorite_provider.dart';
 import '../../routes.dart';
 import '../../services/voucher_services.dart';
 import '../../theme/app_theme.dart';
@@ -25,15 +26,14 @@ class VoucherDetailScreen extends StatefulWidget {
 
 class _VoucherDetailScreenState extends State<VoucherDetailScreen> {
   late Future<VoucherCampaign> _future;
-  bool _favorite = false;
 
   @override
   void initState() {
     super.initState();
+    // Trang thai yeu thich doc tu FavoriteProvider: tai mot lan roi dung chung ca app, thay vi moi man
+    // tu goi isFavorite() - ham do tai toan bo danh sach yeu thich chi de kiem mot muc.
     if (context.read<AuthProvider>().isLoggedIn) {
-      context.read<EngageService>().isFavorite('CAMPAIGN', widget.campaignId).then((v) {
-        if (mounted) setState(() => _favorite = v);
-      }).catchError((_) {});
+      context.read<FavoriteProvider>().ensureLoaded();
     }
     _future = context.read<SearchService>().detail(
       widget.campaignId,
@@ -49,11 +49,7 @@ class _VoucherDetailScreenState extends State<VoucherDetailScreen> {
     }
     final messenger = ScaffoldMessenger.of(context);
     try {
-      final favorite = await context.read<EngageService>().toggleFavorite(
-        'CAMPAIGN',
-        widget.campaignId,
-      );
-      if (mounted) setState(() => _favorite = favorite);
+      final favorite = await context.read<FavoriteProvider>().toggle('CAMPAIGN', widget.campaignId);
       messenger.showSnackBar(
         SnackBar(content: Text(favorite ? 'Đã thêm vào yêu thích' : 'Đã bỏ khỏi yêu thích')),
       );
@@ -63,14 +59,17 @@ class _VoucherDetailScreenState extends State<VoucherDetailScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
+  Widget build(BuildContext context) {
+    // watch: bo yeu thich o man danh sach thi hinh trai tim o day doi theo ngay
+    final favorite = context.watch<FavoriteProvider>().isFavorite('CAMPAIGN', widget.campaignId);
+    return Scaffold(
     appBar: AppBar(
       title: const Text('Chi tiết voucher'),
       actions: [
         IconButton(
-          tooltip: _favorite ? 'Bỏ yêu thích' : 'Yêu thích',
+          tooltip: favorite ? 'Bỏ yêu thích' : 'Yêu thích',
           onPressed: _toggleFavorite,
-          icon: Icon(_favorite ? Icons.favorite : Icons.favorite_border, color: _favorite ? AppColors.danger : null),
+          icon: Icon(favorite ? Icons.favorite : Icons.favorite_border, color: favorite ? AppColors.danger : null),
         ),
       ],
     ),
@@ -84,7 +83,8 @@ class _VoucherDetailScreenState extends State<VoucherDetailScreen> {
         return _Detail(campaign: snap.data!);
       },
     ),
-  );
+    );
+  }
 }
 
 class _Detail extends StatelessWidget {
