@@ -76,7 +76,7 @@ class Order {
       );
 }
 
-// Phan hoi khi tao don / thanh toan lai. paymentUrl = null khi may chu chua cau hinh payOS (dung thanh toan thu)
+// Phan hoi khi tao don / thanh toan lai. paymentUrl = trang thanh toan payOS; null khi cong payOS tam loi (tao lai bang thanh toan lai)
 class CreateOrderResult {
   const CreateOrderResult({required this.order, this.paymentUrl});
 

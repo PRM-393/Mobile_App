@@ -79,7 +79,7 @@ class OrderService {
   Future<CreateOrderResult> retryPayment(String id) async =>
       CreateOrderResult.fromJson(await _api.post('/orders/$id/pay') as Map<String, dynamic>);
 
-  // Thanh toan thu khi may chu bat PAYMENT_SIMULATOR (demo do an, chua co khoa payOS)
+  // Chi dung cho kiem thu tich hop khi may chu bat PAYMENT_SIMULATOR; app khong co nut thanh toan thu
   Future<Order> simulatePayment(String id, {bool success = true}) async {
     final json = await _api.post('/orders/$id/simulate-payment', body: {'success': success}) as Map<String, dynamic>;
     return Order.fromJson(json['order'] as Map<String, dynamic>);
