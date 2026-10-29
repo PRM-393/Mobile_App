@@ -32,9 +32,10 @@ class PaymentResultScreen extends StatefulWidget {
   State<PaymentResultScreen> createState() => _PaymentResultScreenState();
 }
 
-class _PaymentResultScreenState extends State<PaymentResultScreen> {
+// Quay lai app tu trang payOS (app resumed) thi hoi lai trang thai ngay, khong doi lan hoi ke tiep.
+class _PaymentResultScreenState extends State<PaymentResultScreen> with WidgetsBindingObserver {
   late Order _order = widget.args.order;
-  late final String? _paymentUrl = widget.args.paymentUrl ?? widget.args.order.paymentUrl;
+  late String? _paymentUrl = widget.args.paymentUrl ?? widget.args.order.paymentUrl;
   Timer? _timer;
   bool _busy = false;
   String? _error;
@@ -42,13 +43,20 @@ class _PaymentResultScreenState extends State<PaymentResultScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     if (!_order.isFinal) _timer = Timer.periodic(widget.pollInterval, (_) => _refresh());
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _timer?.cancel();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && !_order.isFinal) _refresh();
   }
 
   Future<void> _refresh() async {
@@ -74,14 +82,21 @@ class _PaymentResultScreenState extends State<PaymentResultScreen> {
     if (uri != null && uri.hasScheme) await launchUrl(uri, mode: LaunchMode.externalApplication);
   }
 
-  // Che do demo: may chu chua cau hinh payOS nen thanh toan thu tren may chu
-  Future<void> _simulate() async {
-    setState(() => _busy = true);
+  // Cong payOS loi luc tao don nen chua co link: xin may chu tao lai link (thanh toan lai) roi mo trang payOS
+  Future<void> _createLink() async {
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
     try {
-      final updated = await context.read<OrderService>().simulatePayment(_order.id);
+      final result = await context.read<OrderService>().retryPayment(_order.id);
       if (!mounted) return;
-      setState(() => _order = updated);
-      await _refresh();
+      setState(() {
+        _order = result.order;
+        _paymentUrl = result.paymentUrl;
+        if (_paymentUrl == null) _error = 'Chưa tạo được liên kết thanh toán payOS. Vui lòng thử lại sau ít phút.';
+      });
+      if (_paymentUrl != null) await _openPayment();
     } catch (e) {
       if (mounted) setState(() => _error = e.toString());
     } finally {
@@ -166,9 +181,9 @@ class _PaymentResultScreenState extends State<PaymentResultScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             if (pending && _paymentUrl != null)
-              PrimaryButton(label: 'Mở trang thanh toán payOS', onPressed: _openPayment),
+              PrimaryButton(key: const Key('open-payos'), label: 'Mở trang thanh toán payOS', icon: Icons.open_in_new, onPressed: _openPayment),
             if (pending && _paymentUrl == null)
-              PrimaryButton(key: const Key('simulate-pay'), label: 'Thanh toán thử (demo)', loading: _busy, onPressed: _simulate),
+              PrimaryButton(key: const Key('retry-payos'), label: 'Tạo lại liên kết payOS', loading: _busy, onPressed: _createLink),
             if (pending) ...[
               const SizedBox(height: AppSpacing.sm),
               OutlinedButton.icon(onPressed: _refresh, icon: const Icon(Icons.refresh), label: const Text('Kiểm tra lại')),

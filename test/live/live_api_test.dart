@@ -47,9 +47,20 @@ void main() {
     final engage = EngageService(api);
     final email = 'live${DateTime.now().millisecondsSinceEpoch}@test.local';
 
-    await step('auth: dang ky', () => auth.register(email, fullName: 'Khach Live'));
-    await step('auth: gui OTP', () => auth.requestOtp(email));
-    final session = await step('auth: xac thuc OTP', () => auth.verifyOtp(email, lastOtp(email)));
+    await step('auth: email moi chua dang ky', () async {
+      if (await auth.isRegistered(email)) throw 'bao da dang ky';
+    });
+    await step('auth: dang ky bang mat khau', () => auth.register(email, 'matkhau1', fullName: 'Khach Live'));
+    await step('auth: email da dang ky', () async {
+      if (!await auth.isRegistered(email)) throw 'bao chua dang ky';
+    });
+    await step('auth: dang nhap bang mat khau', () => auth.login(email, 'matkhau1'));
+    // doi mat khau thu hoi moi phien cu nen phien dung cho cac buoc sau lay tu lan dang nhap bang mat khau moi
+    await step('auth: quen mat khau - ma qua email', () async {
+      await auth.requestResetCode(email);
+      await auth.resetPassword(email, lastOtp(email), 'matkhau2');
+    });
+    final session = await step('auth: dang nhap bang mat khau moi', () => auth.login(email, 'matkhau2'));
     access = session?.accessToken;
 
     await step('tim kiem: danh muc', () => search.categories());
