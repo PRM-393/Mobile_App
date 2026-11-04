@@ -50,7 +50,6 @@ class Store {
 const voucherTypeLabels = {
   'DISCOUNT': 'Mã giảm giá',
   'PREPAID': 'Voucher mệnh giá',
-  'COMBO': 'Combo',
 };
 
 class VoucherCampaign {
@@ -96,7 +95,7 @@ class VoucherCampaign {
   final String voucherType;
   final double salePrice;
   final double faceValue;
-  // FR-CAMP-12: DISCOUNT dung discountType (AMOUNT / PERCENT) + discountValue (+ maxDiscount); COMBO dung comboItems
+  // FR-CAMP-12: DISCOUNT dùng discountType + discountValue; PREPAID dùng mệnh giá.
   final String? discountType;
   final double? discountValue;
   final double? maxDiscount;
@@ -133,12 +132,15 @@ class VoucherCampaign {
       VoucherCampaign(
         id: json['id'] as String,
         brandId: json['brandId'] as String? ?? '',
-        brandName: json['brand'] is Map ? (json['brand'] as Map)['name'] as String? : null,
+        brandName: json['brand'] is Map
+            ? (json['brand'] as Map)['name'] as String?
+            : null,
         title: json['title'] as String? ?? '',
         image: json['image'] as String?,
         description: json['description'] as String?,
         terms: json['terms'] as String?,
-        voucherType: json['voucherType'] as String? ?? 'DISCOUNT',
+        // Tuong thich du lieu COMBO cu ma khong dua loai da bo vao giao dien.
+        voucherType: json['voucherType'] == 'DISCOUNT' ? 'DISCOUNT' : 'PREPAID',
         salePrice: asDouble(json['salePrice']),
         faceValue: asDouble(json['faceValue']),
         discountType: json['discountType'] as String?,
