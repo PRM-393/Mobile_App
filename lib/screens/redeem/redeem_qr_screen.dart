@@ -25,7 +25,7 @@ class RedeemQrScreen extends StatefulWidget {
   State<RedeemQrScreen> createState() => _RedeemQrScreenState();
 }
 
-class _RedeemQrScreenState extends State<RedeemQrScreen> {
+class _RedeemQrScreenState extends State<RedeemQrScreen> with WidgetsBindingObserver {
   RedeemToken? _token;
   bool _loading = false;
   ApiException? _error;
@@ -33,10 +33,22 @@ class _RedeemQrScreenState extends State<RedeemQrScreen> {
   bool _stopped = false;
 
   Timer? _statusTimer;
+  // App chay nen thi khong ai quet ma: khong tu lam moi de khoi het luot 10 ma / 10 phut
+  bool _foreground = true;
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    _foreground = state == AppLifecycleState.resumed;
+    if (!_foreground) return;
+    _checkUsed();
+    final token = _token;
+    if (!_stopped && (token == null || !token.expiresAt.isAfter(DateTime.now()))) _fetchToken();
+  }
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _keepScreenOn(true);
     _fetchToken();
     // Nhan vien xac nhan xong thi bao ngay cho khach, khong doi ma het han moi biet
@@ -45,13 +57,14 @@ class _RedeemQrScreenState extends State<RedeemQrScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _statusTimer?.cancel();
     _keepScreenOn(false);
     super.dispose();
   }
 
   Future<void> _checkUsed() async {
-    if (_stopped || !mounted) return;
+    if (_stopped || !mounted || !_foreground) return;
     try {
       final detail = await context.read<OrderService>().walletDetail(widget.voucher.id);
       if (!mounted || detail.voucher.status != 'USED') return;
@@ -104,7 +117,7 @@ class _RedeemQrScreenState extends State<RedeemQrScreen> {
   }
 
   void _onExpire() {
-    if (!_stopped) _fetchToken();
+    if (!_stopped && _foreground) _fetchToken();
   }
 
   @override

@@ -8,6 +8,7 @@ import '../../providers/notification_provider.dart';
 import '../../routes.dart';
 import '../../services/voucher_services.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/cart_button.dart';
 import '../../widgets/common.dart';
 import '../../widgets/voucher_card.dart';
 
@@ -32,9 +33,13 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _load() {
-    final service = context.read<SearchService>();
-    _categories = service.categories();
-    _featured = service.search(
+    _categories = context.read<SearchService>().categories();
+    _loadFeatured();
+  }
+
+  // Danh muc va cach sap xep luon di cung nhau
+  void _loadFeatured() {
+    _featured = context.read<SearchService>().search(
       sort: _sort,
       categoryId: _categoryId,
       pageSize: 20,
@@ -49,11 +54,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void _selectCategory(String? id) {
     setState(() {
       _categoryId = id;
-      _featured = context.read<SearchService>().search(
-        sort: 'newest',
-        categoryId: id,
-        pageSize: 10,
-      );
+      _loadFeatured();
     });
   }
 
@@ -92,6 +93,7 @@ class _HomeScreenState extends State<HomeScreen> {
             onPressed: () => AppRoutes.push(context, AppRoutes.notifications),
           ),
         ),
+        const CartButton(),
       ],
     ),
     body: RefreshIndicator(
@@ -152,7 +154,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       SizedBox(height: 6),
                       Text(
-                        'Hàng trăm ưu đãi đang chờ bạn khám phá hôm nay.',
+                        'Chọn voucher, thanh toán và dùng ngay tại cửa hàng.',
                         style: TextStyle(
                           color: Color(0xFFD9FFF3),
                           fontSize: 13,
@@ -232,11 +234,11 @@ class _HomeScreenState extends State<HomeScreen> {
             children: [
               _chip('Voucher mới', _sort == 'newest', () {
                 _sort = 'newest';
-                setState(_load);
+                setState(_loadFeatured);
               }),
               _chip('Bán chạy', _sort == 'best_seller', () {
                 _sort = 'best_seller';
-                setState(_load);
+                setState(_loadFeatured);
               }),
             ],
           ),

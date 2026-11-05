@@ -105,7 +105,7 @@ class _StoreMapScreenState extends State<StoreMapScreen> {
         if (snapshot.hasError) {
           return ErrorState(
             'Không tải được chi nhánh.',
-            onRetry: () => setState(() => _future = load()),
+            onRetry: () => setState(() { _future = load(); }),
           );
         }
         final stores = snapshot.data!;

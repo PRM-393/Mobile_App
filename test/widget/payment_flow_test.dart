@@ -80,13 +80,14 @@ void main() {
     await tester.pumpWidget(wrap(
       server,
       PaymentResultScreen(
-        args: PaymentResultArgs(order: Order.fromJson(orderJson('PENDING'))),
+        args: PaymentResultArgs(order: Order.fromJson(orderJson('PENDING')), paymentUrl: 'https://pay.payos.vn/web/abc'),
         pollInterval: const Duration(milliseconds: 100),
       ),
     ));
     expect(find.text('Đang chờ thanh toán'), findsOneWidget);
-    // Chua co link payOS -> nut thanh toan thu
-    expect(find.byKey(const Key('simulate-pay')), findsOneWidget);
+    // Chi thanh toan qua payOS: co nut mo trang payOS, khong con nut thanh toan thu
+    expect(find.byKey(const Key('open-payos')), findsOneWidget);
+    expect(find.text('Thanh toán thử (demo)'), findsNothing);
 
     await tester.pump(const Duration(milliseconds: 100));
     await tester.pump(const Duration(milliseconds: 100));
@@ -100,12 +101,11 @@ void main() {
     expect(calls, before);
   });
 
-  testWidgets('bam thanh toan thu goi simulate-payment va hien ket qua', (tester) async {
+  testWidgets('cong payOS loi luc tao don: nut tao lai lien ket goi thanh toan lai', (tester) async {
     final server = FakeServer();
     server.handler = (r) {
-      if (r.url.path.endsWith('/simulate-payment')) return {'outcome': 'FULFILLED', 'order': orderJson('FULFILLED')};
-      if (r.url.path.endsWith('/wallet')) return [];
-      return orderJson('FULFILLED');
+      if (r.url.path.endsWith('/pay')) return {'order': orderJson('PENDING'), 'paymentUrl': 'https://pay.payos.vn/web/abc'};
+      return orderJson('PENDING');
     };
     await tester.pumpWidget(wrap(
       server,
@@ -114,10 +114,12 @@ void main() {
         pollInterval: const Duration(minutes: 5),
       ),
     ));
-    await tester.tap(find.byKey(const Key('simulate-pay')));
+    expect(find.byKey(const Key('open-payos')), findsNothing);
+    await tester.tap(find.byKey(const Key('retry-payos')));
     await tester.pumpAndSettle();
-    expect(server.requests, contains('POST /api/orders/o1/simulate-payment'));
-    expect(find.text('Thanh toán thành công'), findsOneWidget);
+    expect(server.requests, contains('POST /api/orders/o1/pay'));
+    expect(server.requests.where((r) => r.contains('simulate-payment')), isEmpty);
+    expect(find.byKey(const Key('open-payos')), findsOneWidget);
   });
 
   testWidgets('lich su don: nut thanh toan lai chi hien cho don con giu cho', (tester) async {

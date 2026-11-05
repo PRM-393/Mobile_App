@@ -3,13 +3,17 @@ import 'package:provider/provider.dart';
 
 import '../../models/campaign.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/cart_provider.dart';
+import '../../providers/main_tab_controller.dart';
 import '../../routes.dart';
+import '../../services/api_client.dart';
 import '../../services/voucher_services.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/distance.dart';
 import '../../providers/search_provider.dart';
 import '../search/store_map_screen.dart';
 import '../../utils/format.dart';
+import '../../widgets/cart_button.dart';
 import '../../widgets/common.dart';
 import '../engage/campaign_reviews_section.dart';
 
@@ -35,21 +39,35 @@ class _VoucherDetailScreenState extends State<VoucherDetailScreen> {
         if (mounted) setState(() => _favorite = v);
       }).catchError((_) {});
     }
-    _future = context.read<SearchService>().detail(
-      widget.campaignId,
-      lat: context.read<SearchProvider>().latitude,
-      lng: context.read<SearchProvider>().longitude,
-    );
+    _future = _fetch();
+  }
+
+  Future<VoucherCampaign> _fetch() => context.read<SearchService>().detail(
+    widget.campaignId,
+    lat: context.read<SearchProvider>().latitude,
+    lng: context.read<SearchProvider>().longitude,
+  );
+
+  // Quay lai tu man mua hang: ton kho va gioi han da thay doi
+  void _reload() {
+    if (mounted) setState(() { _future = _fetch(); });
   }
 
   Future<void> _toggleFavorite() async {
-    if (!context.read<AuthProvider>().isLoggedIn) {
-      Navigator.pushNamed(context, AppRoutes.login);
-      return;
-    }
+    final auth = context.read<AuthProvider>();
+    final engage = context.read<EngageService>();
     final messenger = ScaffoldMessenger.of(context);
+    if (!auth.isLoggedIn) {
+      // Dang nhap xong thuc hien luon thao tac khach vua bam
+      await Navigator.pushNamed(context, AppRoutes.login);
+      if (!auth.isLoggedIn) return;
+      if (await engage.isFavorite('CAMPAIGN', widget.campaignId).catchError((_) => false)) {
+        if (mounted) setState(() => _favorite = true);
+        return;
+      }
+    }
     try {
-      final favorite = await context.read<EngageService>().toggleFavorite(
+      final favorite = await engage.toggleFavorite(
         'CAMPAIGN',
         widget.campaignId,
       );
@@ -72,6 +90,7 @@ class _VoucherDetailScreenState extends State<VoucherDetailScreen> {
           onPressed: _toggleFavorite,
           icon: Icon(_favorite ? Icons.favorite : Icons.favorite_border, color: _favorite ? AppColors.danger : null),
         ),
+        const CartButton(),
       ],
     ),
     body: FutureBuilder<VoucherCampaign>(
@@ -80,26 +99,55 @@ class _VoucherDetailScreenState extends State<VoucherDetailScreen> {
         if (snap.connectionState != ConnectionState.done) {
           return const LoadingState();
         }
-        if (snap.hasError) return ErrorState(snap.error.toString());
-        return _Detail(campaign: snap.data!);
+        final error = snap.error;
+        // Chien dich da ket thuc / tam dung (mo tu Yeu thich, Mua lai, thong bao): thu lai khong giup gi
+        if (error is ApiException && error.statusCode == 404) {
+          return Center(
+            child: EmptyState(
+              'Voucher này đã ngừng bán.',
+              icon: Icons.event_busy_outlined,
+              actionLabel: 'Xem ưu đãi khác',
+              onAction: () {
+                context.read<MainTabController>().go(MainTabController.home);
+                Navigator.popUntil(context, (route) => route.isFirst);
+              },
+            ),
+          );
+        }
+        if (snap.hasError) return ErrorState(snap.error.toString(), onRetry: _reload);
+        return _Detail(campaign: snap.data!, onChanged: _reload);
       },
     ),
   );
 }
 
 class _Detail extends StatelessWidget {
-  const _Detail({required this.campaign});
+  const _Detail({required this.campaign, required this.onChanged});
 
   final VoucherCampaign campaign;
+  final VoidCallback onChanged;
+
+  void _addToCart(BuildContext context) {
+    final added = context.read<CartProvider>().add(campaign);
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(
+        // SnackBar co nut mac dinh khong tu tat, se che nut mua va di theo sang man khac
+        persist: false,
+        duration: const Duration(seconds: 2),
+        content: Text(added ? 'Đã thêm vào giỏ hàng' : 'Giỏ đã có số lượng tối đa của voucher này'),
+        action: SnackBarAction(
+          label: 'Xem giỏ',
+          onPressed: () => Navigator.pushNamed(context, AppRoutes.cart),
+        ),
+      ));
+  }
 
   @override
   Widget build(BuildContext context) {
     final c = campaign;
-    final canBuy =
-        c.availableQuantity > 0 &&
-        c.status == 'PUBLISHED' &&
-        !DateTime.now().isBefore(c.saleStartAt) &&
-        DateTime.now().isBefore(c.saleEndAt);
+    final now = DateTime.now();
+    final canBuy = c.isOnSaleAt(now);
     return Column(
       children: [
         Expanded(
@@ -177,7 +225,14 @@ class _Detail extends StatelessWidget {
                                   color: AppColors.primary,
                                 ),
                               ),
-                              if (c.faceValue > c.salePrice)
+                              if (c.discountLabel != null)
+                                Text(
+                                  c.discountLabel!,
+                                  style: const TextStyle(
+                                    color: AppColors.textSecondary,
+                                  ),
+                                )
+                              else if (c.faceValue > c.salePrice)
                                 Text(
                                   formatVnd(c.faceValue),
                                   style: const TextStyle(
@@ -284,30 +339,6 @@ class _Detail extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: AppSpacing.sm),
-              SectionCard(
-                title: 'Đánh giá (${c.reviewCount})',
-                icon: Icons.star_outline_rounded,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      c.reviewCount == 0
-                          ? 'Chưa có đánh giá.'
-                          : '${c.averageRating.toStringAsFixed(1)}/5 sao',
-                    ),
-                    for (final review in c.reviews)
-                      ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        title: Text(
-                          '${review['rating']}/5 · ${review['comment'] ?? ''}',
-                        ),
-                        subtitle: review['brandReply'] == null
-                            ? null
-                            : Text('Phản hồi: ${review['brandReply']}'),
-                      ),
-                  ],
-                ),
-              ),
               if (c.stores.isNotEmpty) ...[
                 const SizedBox(height: AppSpacing.sm),
                 OutlinedButton.icon(
@@ -377,17 +408,29 @@ class _Detail extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(width: AppSpacing.md),
+              if (canBuy) ...[
+                const SizedBox(width: AppSpacing.sm),
+                IconButton.outlined(
+                  key: const Key('add-to-cart'),
+                  tooltip: 'Thêm vào giỏ hàng',
+                  onPressed: () => _addToCart(context),
+                  icon: const Icon(Icons.add_shopping_cart),
+                ),
+              ],
+              const SizedBox(width: AppSpacing.sm),
               Expanded(
                 flex: 2,
                 child: PrimaryButton(
-                  label: canBuy ? 'Mua ngay' : 'Hết hàng / ngừng bán',
+                  label: canBuy ? 'Mua ngay' : c.unavailableLabelAt(now),
                   onPressed: canBuy
-                      ? () => AppRoutes.push(
-                          context,
-                          AppRoutes.checkout,
-                          arguments: c,
-                        )
+                      ? () async {
+                          await AppRoutes.push(
+                            context,
+                            AppRoutes.checkout,
+                            arguments: c,
+                          );
+                          onChanged();
+                        }
                       : null,
                 ),
               ),

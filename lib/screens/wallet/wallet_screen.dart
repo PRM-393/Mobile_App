@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../models/order.dart';
+import '../../providers/main_tab_controller.dart';
 import '../../providers/wallet_provider.dart';
 import '../../routes.dart';
 import '../../theme/app_theme.dart';
@@ -19,10 +20,24 @@ class WalletScreen extends StatefulWidget {
 }
 
 class _WalletScreenState extends State<WalletScreen> {
+  MainTabController? _tabs;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) => context.read<WalletProvider>().load());
+    _tabs = context.read<MainTabController?>()?..addListener(_onTabChanged);
+  }
+
+  @override
+  void dispose() {
+    _tabs?.removeListener(_onTabChanged);
+    super.dispose();
+  }
+
+  // Mo lai tab vi: voucher vua thanh toan xong (webhook den sau) hoac vua dung tai cua hang phai hien ngay
+  void _onTabChanged() {
+    if (_tabs?.index == MainTabController.wallet && mounted) context.read<WalletProvider>().load();
   }
 
   // Module 12: khong watch ca provider; Selector chi rebuild thanh tab khi doi tab,
@@ -46,7 +61,7 @@ class _WalletScreenState extends State<WalletScreen> {
                 final active = items.where((e) => e.canRedeem).toList();
                 final value = active.fold<double>(
                   0,
-                  (sum, e) => sum + (e.campaign?.faceValue ?? 0),
+                  (sum, e) => sum + (e.campaign?.walletValue ?? 0),
                 );
                 return Padding(
                   padding: const EdgeInsets.fromLTRB(
@@ -136,11 +151,16 @@ class _WalletScreenState extends State<WalletScreen> {
                       return ListView(children: [ErrorState(error, onRetry: wallet.load)]);
                     }
                     if (items.isEmpty) {
+                      final tabs = context.read<MainTabController?>();
                       return ListView(
-                        children: const [
+                        children: [
                           EmptyState(
-                            'Không có voucher nào trong mục này.',
+                            wallet.tab == 'ACTIVE'
+                                ? 'Bạn chưa có voucher nào. Voucher đã thanh toán sẽ nằm ở đây.'
+                                : 'Không có voucher nào trong mục này.',
                             icon: Icons.account_balance_wallet_outlined,
+                            actionLabel: wallet.tab == 'ACTIVE' && tabs != null ? 'Khám phá ưu đãi' : null,
+                            onAction: wallet.tab == 'ACTIVE' && tabs != null ? () => tabs.go(MainTabController.home) : null,
                           ),
                         ],
                       );

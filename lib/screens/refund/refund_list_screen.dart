@@ -26,7 +26,7 @@ class _RefundListScreenState extends State<RefundListScreen> {
 
   Future<void> _reload() async {
     final future = context.read<RefundService>().myRequests();
-    setState(() => _future = future);
+    setState(() { _future = future; });
     await future.catchError((_) => <RefundRequest>[]);
   }
 

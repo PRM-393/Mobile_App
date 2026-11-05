@@ -2,14 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../models/engage.dart';
-import '../../providers/main_tab_controller.dart';
 import '../../providers/notification_provider.dart';
 import '../../routes.dart';
-import '../../services/voucher_services.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/format.dart';
+import '../../utils/notification_router.dart';
 import '../../widgets/common.dart';
-import '../checkout/payment_result_screen.dart';
 
 // FR-ENGAGE-06: danh sach thong bao (da doc / chua doc); bam thong bao mo dung man hinh
 class NotificationsScreen extends StatefulWidget {
@@ -30,25 +28,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   Future<void> _open(AppNotification n) async {
     final provider = context.read<NotificationProvider>();
     await provider.markRead(n);
-    if (!mounted) return;
-    final orderId = n.data['orderId'] as String?;
-    final campaignId = n.data['campaignId'] as String?;
-    if (orderId != null) {
-      try {
-        final order = await context.read<OrderService>().getOrder(orderId);
-        if (!mounted) return;
-        await AppRoutes.push(context, AppRoutes.paymentResult, arguments: PaymentResultArgs(order: order));
-      } catch (e) {
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
-      }
-    } else if (n.data['refundId'] != null) {
-      await AppRoutes.push(context, AppRoutes.refundList);
-    } else if (n.data['voucherItemId'] != null) {
-      context.read<MainTabController>().go(MainTabController.wallet);
-      Navigator.popUntil(context, (route) => route.isFirst);
-    } else if (campaignId != null) {
-      await AppRoutes.push(context, AppRoutes.voucherDetail, arguments: campaignId);
-    }
+    if (mounted) await openNotificationTarget(context, n.type, n.data);
   }
 
   IconData _icon(String type) => switch (type) {

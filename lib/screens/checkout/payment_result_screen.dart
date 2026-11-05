@@ -2,14 +2,15 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../models/order.dart';
 import '../../providers/main_tab_controller.dart';
 import '../../providers/wallet_provider.dart';
+import '../../routes.dart';
 import '../../services/voucher_services.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/format.dart';
+import '../../utils/payment_link.dart';
 import '../../widgets/common.dart';
 
 // Tham so mo man ket qua: don vua tao / thanh toan lai, kem link payOS neu co
@@ -32,9 +33,10 @@ class PaymentResultScreen extends StatefulWidget {
   State<PaymentResultScreen> createState() => _PaymentResultScreenState();
 }
 
-class _PaymentResultScreenState extends State<PaymentResultScreen> {
+// Quay lai app tu trang payOS (app resumed) thi hoi lai trang thai ngay, khong doi lan hoi ke tiep.
+class _PaymentResultScreenState extends State<PaymentResultScreen> with WidgetsBindingObserver {
   late Order _order = widget.args.order;
-  late final String? _paymentUrl = widget.args.paymentUrl ?? widget.args.order.paymentUrl;
+  late String? _paymentUrl = widget.args.paymentUrl ?? widget.args.order.paymentUrl;
   Timer? _timer;
   bool _busy = false;
   String? _error;
@@ -42,13 +44,20 @@ class _PaymentResultScreenState extends State<PaymentResultScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     if (!_order.isFinal) _timer = Timer.periodic(widget.pollInterval, (_) => _refresh());
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _timer?.cancel();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && !_order.isFinal) _refresh();
   }
 
   Future<void> _refresh() async {
@@ -70,18 +79,27 @@ class _PaymentResultScreenState extends State<PaymentResultScreen> {
   }
 
   Future<void> _openPayment() async {
-    final uri = Uri.tryParse(_paymentUrl ?? '');
-    if (uri != null && uri.hasScheme) await launchUrl(uri, mode: LaunchMode.externalApplication);
+    final opened = await openPaymentLink(_paymentUrl);
+    if (!opened && mounted) {
+      setState(() => _error = 'Không mở được trang thanh toán. Vui lòng kiểm tra trình duyệt trên máy rồi thử lại.');
+    }
   }
 
-  // Che do demo: may chu chua cau hinh payOS nen thanh toan thu tren may chu
-  Future<void> _simulate() async {
-    setState(() => _busy = true);
+  // Cong payOS loi luc tao don nen chua co link: xin may chu tao lai link (thanh toan lai) roi mo trang payOS
+  Future<void> _createLink() async {
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
     try {
-      final updated = await context.read<OrderService>().simulatePayment(_order.id);
+      final result = await context.read<OrderService>().retryPayment(_order.id);
       if (!mounted) return;
-      setState(() => _order = updated);
-      await _refresh();
+      setState(() {
+        _order = result.order;
+        _paymentUrl = result.paymentUrl;
+        if (_paymentUrl == null) _error = 'Chưa tạo được liên kết thanh toán payOS. Vui lòng thử lại sau ít phút.';
+      });
+      if (_paymentUrl != null) await _openPayment();
     } catch (e) {
       if (mounted) setState(() => _error = e.toString());
     } finally {
@@ -89,22 +107,35 @@ class _PaymentResultScreenState extends State<PaymentResultScreen> {
     }
   }
 
+  // Voucher moi nam o muc "Dang hieu luc" cua vi, du lan truoc khach dang xem muc khac
   void _goToWallet() {
+    context.read<WalletProvider>().selectTab('ACTIVE');
     context.read<MainTabController>().go(MainTabController.wallet);
     Navigator.popUntil(context, (route) => route.isFirst);
   }
 
+  void _goToOrders() {
+    context.read<MainTabController>().go(MainTabController.orders);
+    Navigator.popUntil(context, (route) => route.isFirst);
+  }
+
+  void _buyAgain() => Navigator.pushReplacementNamed(context, AppRoutes.voucherDetail, arguments: _order.campaignId);
+
   @override
   Widget build(BuildContext context) {
+    final pending = _order.status == 'PENDING';
+    // Het thoi gian giu cho: lien ket thanh toan da het han, may chu se tu huy don
+    final expired = pending && _order.reservedUntil != null && !_order.canRetry(DateTime.now());
     final (icon, color, title, message) = switch (_order.status) {
-      'FULFILLED' => (Icons.check_circle, AppColors.success, 'Thanh toán thành công', 'Voucher đã được phát hành vào ví của bạn.'),
+      'PENDING' when expired => (Icons.timer_off_outlined, AppColors.danger, 'Đã hết thời gian giữ chỗ', 'Đơn này không còn thanh toán được và sẽ tự hủy. Bạn có thể mua lại nếu voucher còn hàng.'),
+      'FULFILLED' => (Icons.check_circle, AppColors.success, 'Thanh toán thành công', 'Voucher đã vào Ví voucher, mục Đang hiệu lực. Mở ví để lấy mã QR khi dùng tại cửa hàng.'),
       'PAID' => (Icons.hourglass_bottom, AppColors.secondary, 'Đã nhận thanh toán', 'Đang phát hành voucher...'),
       'CANCELLED' => (Icons.cancel, AppColors.danger, 'Đơn hàng đã hủy', 'Thanh toán không thành công hoặc đã quá 15 phút giữ chỗ.'),
       'PAYMENT_MISMATCH' => (Icons.report, AppColors.danger, 'Số tiền không khớp', 'Bộ phận hỗ trợ sẽ hoàn lại số tiền bạn đã thanh toán.'),
-      'REFUNDED_OVERSOLD' => (Icons.currency_exchange, AppColors.danger, 'Voucher đã hết', 'Bạn được hoàn 100% số tiền đã thanh toán.'),
-      _ => (Icons.schedule, AppColors.secondary, 'Đang chờ thanh toán', 'Hoàn tất thanh toán trên trang payOS, kết quả sẽ tự cập nhật.'),
+      'REFUNDED_OVERSOLD' => (Icons.currency_exchange, AppColors.danger, 'Voucher đã hết', 'Bạn sẽ được hoàn 100% số tiền đã thanh toán và nhận thông báo khi tiền được chuyển lại.'),
+      _ => (Icons.schedule, AppColors.secondary, 'Đang chờ thanh toán', 'Hoàn tất thanh toán trên trang payOS rồi quay lại đây, kết quả sẽ tự cập nhật. Đơn được lưu ở tab Đơn hàng.'),
     };
-    final pending = _order.status == 'PENDING';
+    final canPay = pending && !expired;
     return Scaffold(
       appBar: AppBar(title: const Text('Kết quả thanh toán')),
       body: ListView(
@@ -139,10 +170,10 @@ class _PaymentResultScreenState extends State<PaymentResultScreen> {
             child: Column(
               children: [
                 DetailRow('Voucher', _order.campaignTitle ?? 'Đơn hàng'),
-                DetailRow('Mã đơn', _order.id),
+                DetailRow('Mã đơn', '#${_order.id.length > 8 ? _order.id.substring(0, 8).toUpperCase() : _order.id.toUpperCase()}'),
                 DetailRow('Số lượng', 'x${_order.quantity}'),
                 DetailRow('Thời gian', formatDateTime(_order.createdAt)),
-                if (pending && _order.reservedUntil != null)
+                if (canPay && _order.reservedUntil != null)
                   DetailRow('Giữ chỗ đến', formatDateTime(_order.reservedUntil!)),
                 const Divider(height: AppSpacing.lg),
                 DetailRow(
@@ -165,14 +196,17 @@ class _PaymentResultScreenState extends State<PaymentResultScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            if (pending && _paymentUrl != null)
-              PrimaryButton(label: 'Mở trang thanh toán payOS', onPressed: _openPayment),
-            if (pending && _paymentUrl == null)
-              PrimaryButton(key: const Key('simulate-pay'), label: 'Thanh toán thử (demo)', loading: _busy, onPressed: _simulate),
-            if (pending) ...[
+            if (canPay && _paymentUrl != null)
+              PrimaryButton(key: const Key('open-payos'), label: 'Mở trang thanh toán payOS', icon: Icons.open_in_new, onPressed: _openPayment),
+            if (canPay && _paymentUrl == null)
+              PrimaryButton(key: const Key('retry-payos'), label: 'Tạo lại liên kết payOS', loading: _busy, onPressed: _createLink),
+            if (canPay) ...[
               const SizedBox(height: AppSpacing.sm),
               OutlinedButton.icon(onPressed: _refresh, icon: const Icon(Icons.refresh), label: const Text('Kiểm tra lại')),
+              TextButton(key: const Key('go-orders'), onPressed: _goToOrders, child: const Text('Xem trong tab Đơn hàng')),
             ],
+            if (expired || _order.status == 'CANCELLED')
+              PrimaryButton(key: const Key('buy-again'), label: 'Mua lại', onPressed: _buyAgain),
             if (_order.status == 'FULFILLED') ...[
               PrimaryButton(
                 key: const Key('go-wallet'),

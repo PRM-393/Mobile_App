@@ -23,13 +23,13 @@ void main() {
     await tester.pumpWidget(buildApp(walletApi([
       walletVoucher('v1', title: 'Voucher 100K'),
       walletVoucher('v2', status: 'REFUND_PENDING', title: 'Trà sữa'),
-      walletVoucher('v3', status: 'USED', title: 'Combo bánh mì'),
+      walletVoucher('v3', status: 'USED', title: 'Voucher bánh mì'),
     ])));
     await tester.pumpAndSettle();
 
     expect(find.text('Voucher 100K'), findsOneWidget);
     expect(find.text('Trà sữa'), findsOneWidget);
-    expect(find.text('Combo bánh mì'), findsNothing);
+    expect(find.text('Voucher bánh mì'), findsNothing);
     expect(find.text('Đang hoàn tiền'), findsOneWidget);
     expect(find.text('Sử dụng ngay'), findsOneWidget, reason: 'chi voucher ACTIVE moi tao ma duoc');
     expect(find.byKey(const ValueKey('v1')), findsOneWidget);
@@ -50,14 +50,14 @@ void main() {
 
   testWidgets('tab "Đã dùng": nut danh gia chi hien khi may chu cho phep (BR-10)', (tester) async {
     await tester.pumpWidget(buildApp(walletApi([
-      walletVoucher('v1', status: 'USED', title: 'Combo bánh mì', canReview: true),
+      walletVoucher('v1', status: 'USED', title: 'Voucher bánh mì', canReview: true),
       walletVoucher('v2', status: 'USED', title: 'Đã đánh giá', hasReviewed: true),
     ])));
     await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(ChoiceChip, 'Đã dùng'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Combo bánh mì'), findsOneWidget);
+    expect(find.text('Voucher bánh mì'), findsOneWidget);
     expect(find.text('Đã đánh giá'), findsOneWidget);
     expect(find.text('Đánh giá'), findsOneWidget);
     expect(find.text('Sử dụng ngay'), findsNothing);
@@ -66,7 +66,7 @@ void main() {
   testWidgets('vi rong thi hien thong bao trong', (tester) async {
     await tester.pumpWidget(buildApp(walletApi([])));
     await tester.pumpAndSettle();
-    expect(find.text('Không có voucher nào trong mục này.'), findsOneWidget);
+    expect(find.text('Bạn chưa có voucher nào. Voucher đã thanh toán sẽ nằm ở đây.'), findsOneWidget);
   });
 
   testWidgets('mat mang: hien vi da luu kem banner, an nut tao ma va noi ro ly do (LIM-07)', (tester) async {

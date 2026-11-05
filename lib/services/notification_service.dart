@@ -9,6 +9,9 @@ class NotificationService {
   final _plugin = FlutterLocalNotificationsPlugin();
   bool _ready = false;
 
+  // Khach bam thong bao khi app dang chay / chay nen
+  void Function(String? payload)? onTap;
+
   static const _channel = AndroidNotificationDetails(
     'voucher_platform_default',
     'Thông báo voucher',
@@ -25,6 +28,7 @@ class NotificationService {
           android: AndroidInitializationSettings('@mipmap/ic_launcher'),
           iOS: DarwinInitializationSettings(),
         ),
+        onDidReceiveNotificationResponse: (response) => onTap?.call(response.payload),
       );
       await _plugin
           .resolvePlatformSpecificImplementation<
@@ -34,6 +38,17 @@ class NotificationService {
       _ready = true;
     } catch (e) {
       debugPrint('Khong khoi tao duoc thong bao cuc bo: $e');
+    }
+  }
+
+  // App duoc mo (tu trang thai da tat) bang cach bam thong bao
+  Future<String?> launchPayload() async {
+    if (!_ready) return null;
+    try {
+      final details = await _plugin.getNotificationAppLaunchDetails();
+      return details?.didNotificationLaunchApp == true ? details?.notificationResponse?.payload : null;
+    } catch (_) {
+      return null;
     }
   }
 
@@ -55,12 +70,13 @@ class NotificationService {
   Future<void> voucherRefunded(String title) =>
       show('Hoàn tiền thành công', title);
 
-  Future<void> show(String title, String body) async {
+  Future<void> show(String title, String body, {String? payload}) async {
     if (!_ready) return;
     await _plugin.show(
       id: DateTime.now().millisecondsSinceEpoch ~/ 1000 % 100000,
       title: title,
       body: body,
+      payload: payload,
       notificationDetails: const NotificationDetails(
         android: _channel,
         iOS: DarwinNotificationDetails(),

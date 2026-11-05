@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import 'config/env.dart';
 import 'providers/auth_provider.dart';
+import 'providers/cart_provider.dart';
 import 'providers/main_tab_controller.dart';
 import 'providers/notification_provider.dart';
 import 'providers/search_provider.dart';
@@ -17,6 +18,7 @@ import 'services/token_storage.dart';
 import 'services/voucher_services.dart';
 import 'services/wallet_cache.dart';
 import 'theme/app_theme.dart';
+import 'utils/notification_router.dart';
 
 // Diem vao app khach hang: khoi tao service, khoi phuc phien dang nhap, dang ky Provider (Module 5)
 Future<void> main() async {
@@ -32,6 +34,8 @@ Future<void> main() async {
   final preferences = await PreferencesService.create();
   await Future.wait([auth.hydrate(), notifications.init()]);
 
+  notifications.onTap = openNotificationPayload;
+
   final searchService = SearchService(api);
   final orderService = OrderService(api);
   final engageService = EngageService(api);
@@ -39,6 +43,7 @@ Future<void> main() async {
   final notificationProvider = NotificationProvider(engageService, local: notifications, preferences: preferences);
   // F10: vi luu SQLite de xem khi mat mang (NFR-MOB-12)
   final walletProvider = WalletProvider(orderService, cache: SqliteWalletCache());
+  final cartProvider = CartProvider(preferences);
 
   // Dang nhap: bat dau kiem tra thong bao; dang xuat: dung va xoa du lieu cua tai khoan cu
   var wasLoggedIn = auth.isLoggedIn;
@@ -49,6 +54,7 @@ Future<void> main() async {
       notificationProvider.stopPolling();
       preferences.clearUserData();
       walletProvider.clear();
+      cartProvider.clear();
     }
     wasLoggedIn = auth.isLoggedIn;
   });
@@ -69,11 +75,18 @@ Future<void> main() async {
         ChangeNotifierProvider(create: (_) => MainTabController()),
         ChangeNotifierProvider(create: (_) => SearchProvider(searchService, preferences: preferences)),
         ChangeNotifierProvider.value(value: walletProvider),
+        ChangeNotifierProvider.value(value: cartProvider),
         ChangeNotifierProvider.value(value: notificationProvider),
       ],
       child: const VoucherApp(),
     ),
   );
+
+  // Mo app bang cach bam thong bao: doi khung hinh dau tien roi mo dung man hinh
+  final launchPayload = await notifications.launchPayload();
+  if (launchPayload != null) {
+    WidgetsBinding.instance.addPostFrameCallback((_) => openNotificationPayload(launchPayload));
+  }
 }
 
 class VoucherApp extends StatelessWidget {
@@ -84,6 +97,7 @@ class VoucherApp extends StatelessWidget {
     title: 'Voucher Platform',
     debugShowCheckedModeBanner: false,
     theme: buildAppTheme(),
+    navigatorKey: AppRoutes.navigatorKey,
     initialRoute: AppRoutes.main,
     onGenerateRoute: AppRoutes.onGenerateRoute,
   );
