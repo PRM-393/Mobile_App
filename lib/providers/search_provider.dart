@@ -47,6 +47,22 @@ class SearchProvider extends ChangeNotifier {
     super.dispose();
   }
 
+  // So bo loc dang bat, hien tren nut Bo loc de khach biet vi sao danh sach it di
+  int get activeFilterCount => [
+    categoryId?.isNotEmpty == true,
+    sort != 'newest' && sort != 'distance_asc',
+    minPrice != null || maxPrice != null,
+    minDiscount != null || maxDiscount != null,
+  ].where((active) => active).length;
+
+  Future<void> clearFilters() async {
+    categoryId = null;
+    sort = _radiusKm != null ? 'distance_asc' : 'newest';
+    minPrice = maxPrice = null;
+    minDiscount = maxDiscount = null;
+    await search();
+  }
+
   Future<void> clearRecentKeywords() async {
     await _preferences?.clearRecentKeywords();
     emit();

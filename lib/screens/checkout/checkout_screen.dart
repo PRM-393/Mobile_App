@@ -12,6 +12,7 @@ import '../../services/voucher_services.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/format.dart';
 import '../../utils/payment_link.dart';
+import '../../utils/purchase_quota.dart';
 import '../../widgets/common.dart';
 
 // Mo man mua hang tu gio: mang theo so luong da chon
@@ -43,21 +44,15 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
   int get _limit => widget.campaign.limitPerUser ?? 5; // BR-01: mac dinh 5
 
-  // BR-01: voucher da mua va don dang giu cho deu tinh vao gioi han moi tai khoan
-  int get _owned {
-    final wallet = context.read<WalletProvider?>();
-    return wallet?.items.where((v) => v.campaignId == widget.campaign.id).length ?? 0;
-  }
+  // BR-01: don dang giu cho va voucher da mua (tru voucher da hoan) deu tinh vao gioi han
+  int get _remainingQuota => remainingPurchaseQuota(
+    widget.campaign,
+    context.read<WalletProvider?>()?.items ?? const [],
+    _pendingOrders,
+    DateTime.now(),
+  );
 
-  int get _remainingQuota {
-    final pending = _pendingOrders.fold<int>(0, (sum, o) => sum + o.quantity);
-    return (_limit - _owned - pending).clamp(0, _limit);
-  }
-
-  int get _maxQuantity {
-    final available = widget.campaign.availableQuantity;
-    return available < _remainingQuota ? available : _remainingQuota;
-  }
+  int get _maxQuantity => buyableQuantity(widget.campaign, _remainingQuota);
 
   @override
   void initState() {

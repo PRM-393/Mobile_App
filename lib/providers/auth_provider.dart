@@ -70,6 +70,9 @@ class AuthProvider extends ChangeNotifier {
     await _setSession(session);
   }
 
+  Future<void> changePassword(String currentPassword, String newPassword) =>
+      _authService.changePassword(currentPassword, newPassword);
+
   // F17: luu thong tin ho so moi vao phien hien tai (giu nguyen token)
   Future<void> updateUser(AuthUser user) async {
     final current = _session;

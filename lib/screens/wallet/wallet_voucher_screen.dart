@@ -191,7 +191,7 @@ class _Header extends StatelessWidget {
             const SizedBox(height: AppSpacing.md),
             const Divider(),
             const SizedBox(height: AppSpacing.xs),
-            if (c != null) DetailRow('Giá trị', formatVnd(c.faceValue)),
+            if (c != null) DetailRow('Giá trị', c.discountLabel ?? formatVnd(c.faceValue)),
             DetailRow('Mã tra cứu', voucher.code),
             DetailRow('Ngày mua', formatDateTime(voucher.issuedAt)),
             DetailRow('Hạn sử dụng', formatDateTime(voucher.expireAt)),

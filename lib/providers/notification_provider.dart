@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 
@@ -85,7 +86,7 @@ class NotificationProvider extends ChangeNotifier {
     if (last != null) {
       final fresh = items.where((n) => !n.isRead && n.createdAt.isAfter(last)).toList().reversed;
       for (final n in fresh) {
-        await _local?.show(n.title, n.body);
+        await _local?.show(n.title, n.body, payload: jsonEncode({'type': n.type, ...n.data}));
       }
     }
     if (last == null || newest.isAfter(last)) await prefs.setLastNotifiedAt(newest);

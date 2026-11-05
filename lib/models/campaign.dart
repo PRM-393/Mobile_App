@@ -1,3 +1,4 @@
+import '../utils/format.dart';
 import 'json_utils.dart';
 
 // Doi tuong nghiep vu khop voi entity BE (SRS muc 7)
@@ -115,12 +116,29 @@ class VoucherCampaign {
   final int reviewCount;
   final List<Map<String, dynamic>> reviews;
 
+  bool get isDiscount => voucherType == 'DISCOUNT';
+
+  // Ma giam gia khong co "gia goc": khach tra tien de lay ma, gia tri la muc giam khi dung tai cua hang.
+  // Gach ngang faceValue se khien ma "Giam 30%" trong nhu giam 85%.
+  String? get discountLabel {
+    if (!isDiscount || discountValue == null) return null;
+    if (discountType == 'PERCENT') {
+      final cap = maxDiscount != null && maxDiscount! > 0 ? ', tối đa ${formatVnd(maxDiscount!)}' : '';
+      return 'Giảm ${discountValue!.round()}%$cap';
+    }
+    return 'Giảm ${formatVnd(discountValue!)}';
+  }
+
+  // Gia tri quy ra tien cua mot voucher, dung cho tong gia tri trong vi (ma giam % tinh theo muc giam toi da)
+  double get walletValue {
+    if (!isDiscount) return faceValue;
+    return (discountType == 'PERCENT' ? maxDiscount : discountValue) ?? 0;
+  }
+
   // Ton kho kha dung = tong - da ban - dang giu cho (FR-CAMP-11)
   // Phan tram tiet kiem hien tren the voucher: giam theo % thi lay discountValue, con lai so gia ban voi gia tri
   int? get savingPercent {
-    if (voucherType == 'DISCOUNT' && discountType == 'PERCENT') {
-      return discountValue?.round();
-    }
+    if (isDiscount) return discountType == 'PERCENT' ? discountValue?.round() : null;
     if (faceValue <= 0 || salePrice >= faceValue) return null;
     return ((faceValue - salePrice) / faceValue * 100).round();
   }

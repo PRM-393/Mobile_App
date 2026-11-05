@@ -140,7 +140,12 @@ class VoucherCard extends StatelessWidget {
           fontSize: 17,
         ),
       ),
-      if (campaign.faceValue > campaign.salePrice)
+      if (campaign.discountLabel != null)
+        Text(
+          campaign.discountLabel!,
+          style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
+        )
+      else if (campaign.faceValue > campaign.salePrice)
         Text(
           formatVnd(campaign.faceValue),
           style: const TextStyle(

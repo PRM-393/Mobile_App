@@ -71,7 +71,11 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                 ),
                 subtitle: Text(f.isBrand
                     ? 'Thương hiệu đang theo dõi'
-                    : [if (f.brandName != null) f.brandName!, if (f.salePrice != null) formatVnd(f.salePrice!)].join(' · ')),
+                    : [
+                        if (f.brandName != null) f.brandName!,
+                        if (f.salePrice != null) formatVnd(f.salePrice!),
+                        if (f.status != null && f.status != 'PUBLISHED' && f.status != 'SOLD_OUT') 'Ngừng bán',
+                      ].join(' · ')),
                 trailing: const Icon(Icons.chevron_right),
                 // F06: thuong hieu -> trang thuong hieu; voucher -> chi tiet
                 onTap: () async {

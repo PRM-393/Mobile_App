@@ -16,11 +16,15 @@ import 'package:voucher_platform_mobile/screens/checkout/checkout_screen.dart';
 import 'package:voucher_platform_mobile/screens/checkout/payment_result_screen.dart';
 import 'package:voucher_platform_mobile/screens/home/home_screen.dart';
 import 'package:voucher_platform_mobile/screens/orders/order_history_screen.dart';
+import 'package:voucher_platform_mobile/screens/search/search_screen.dart';
 import 'package:voucher_platform_mobile/services/auth_service.dart';
 import 'package:voucher_platform_mobile/services/notification_service.dart';
 import 'package:voucher_platform_mobile/services/preferences_service.dart';
 import 'package:voucher_platform_mobile/services/token_storage.dart';
 import 'package:voucher_platform_mobile/services/voucher_services.dart';
+import 'package:voucher_platform_mobile/utils/notification_router.dart';
+import 'package:voucher_platform_mobile/utils/purchase_quota.dart';
+import 'package:voucher_platform_mobile/widgets/voucher_card.dart';
 
 import '../helpers/fake_api.dart';
 
@@ -351,6 +355,165 @@ void main() {
       await tester.pump();
       expect(tabs.index, MainTabController.wallet);
     });
+  });
+
+  Map<String, dynamic> voucher(String id, String status) => {
+    'id': id,
+    'orderId': 'o1',
+    'campaignId': 'c1',
+    'code': 'VC-$id',
+    'status': status,
+    'issuedAt': '2026-10-12T03:00:00.000Z',
+    'expireAt': '2099-01-01T00:00:00.000Z',
+  };
+
+  group('Gioi han mua va so luong thuc te', () {
+    test('voucher da hoan khong tinh, don con giu cho van tinh', () {
+      final c = VoucherCampaign.fromJson(_campaign(limit: 3));
+      final wallet = [VoucherItem.fromJson(voucher('v1', 'ACTIVE')), VoucherItem.fromJson(voucher('v2', 'REFUNDED'))];
+      final now = DateTime.now();
+      expect(remainingPurchaseQuota(c, wallet, const [], now), 2);
+      expect(remainingPurchaseQuota(c, wallet, [Order.fromJson(_order('PENDING'))], now), 1);
+      expect(remainingPurchaseQuota(c, wallet, [Order.fromJson(_order('CANCELLED'))], now), 2);
+    });
+
+    testWidgets('gio hang giam ve so luong thuc te mua duoc; het luot thi khoa mua va noi ro', (tester) async {
+      var owned = [voucher('v1', 'ACTIVE'), voucher('v2', 'REFUNDED')];
+      final (_, _, cart, _) = await pumpApp(
+        tester,
+        routes: {
+          ...detailRoutes,
+          'GET /vouchers/c1': (_) => FakeResponse.ok(_campaign(limit: 3)),
+          'GET /wallet': (_) => FakeResponse.ok(owned),
+        },
+        open: (c) async {
+          c.read<CartProvider>().add(VoucherCampaign.fromJson(_campaign(limit: 3)), quantity: 3);
+          await c.read<WalletProvider>().load();
+          if (c.mounted) await Navigator.pushNamed(c, AppRoutes.cart);
+        },
+      );
+      await tester.pumpAndSettle();
+      expect(cart.items.single.quantity, 2); // con mua duoc 2 vi 1 voucher da hoan khong tinh
+      expect(find.text('Mua 2 voucher'), findsOneWidget);
+      final plus = tester.widget<IconButton>(find.byKey(const Key('cart-plus-c1')));
+      expect(plus.onPressed, isNull);
+      owned = [];
+    });
+
+    testWidgets('khach da mua het luot: gio bao dat gioi han, khong co nut mua', (tester) async {
+      await pumpApp(
+        tester,
+        routes: {
+          ...detailRoutes,
+          'GET /vouchers/c1': (_) => FakeResponse.ok(_campaign(limit: 1)),
+          'GET /wallet': (_) => FakeResponse.ok([voucher('v1', 'USED')]),
+        },
+        open: (c) async {
+          c.read<CartProvider>().add(VoucherCampaign.fromJson(_campaign(limit: 1)));
+          await c.read<WalletProvider>().load();
+          if (c.mounted) await Navigator.pushNamed(c, AppRoutes.cart);
+        },
+      );
+      await tester.pumpAndSettle();
+      expect(find.textContaining('đạt giới hạn mua'), findsOneWidget);
+      expect(find.byKey(const Key('cart-buy-c1')), findsNothing);
+    });
+  });
+
+  group('Ma giam gia hien dung gia tri', () {
+    final discount = VoucherCampaign.fromJson({
+      ..._campaign(),
+      'voucherType': 'DISCOUNT',
+      'discountType': 'PERCENT',
+      'discountValue': 30,
+      'maxDiscount': 30000,
+      'salePrice': 15000,
+      'faceValue': 100000,
+    });
+
+    test('nhan giam va gia tri quy ra tien khong dung faceValue', () {
+      expect(discount.discountLabel, contains('Giảm 30%'));
+      expect(discount.discountLabel, contains('30.000'));
+      expect(discount.walletValue, 30000);
+      expect(VoucherCampaign.fromJson(_campaign()).walletValue, 100000);
+      expect(VoucherCampaign.fromJson(_campaign()).discountLabel, isNull);
+      final amount = VoucherCampaign.fromJson({..._campaign(), 'voucherType': 'DISCOUNT', 'discountType': 'AMOUNT', 'discountValue': 20000, 'salePrice': 5000});
+      expect(amount.discountLabel, contains('20.000'));
+      expect(amount.savingPercent, isNull);
+    });
+
+    testWidgets('the voucher khong gach gia 100.000d', (tester) async {
+      await tester.pumpWidget(MaterialApp(home: Scaffold(body: VoucherCard(campaign: discount))));
+      expect(find.textContaining('Giảm 30%'), findsOneWidget);
+      expect(find.textContaining('100.000'), findsNothing);
+    });
+  });
+
+  testWidgets('voucher da ngung ban: bao ro, khong hien nut thu lai', (tester) async {
+    await pumpApp(
+      tester,
+      routes: {'GET /vouchers/c1': (_) => const FakeResponse.error(404, 'Không tìm thấy voucher đang công khai.')},
+      open: (c) => Navigator.pushNamed(c, AppRoutes.voucherDetail, arguments: 'c1'),
+    );
+    expect(find.text('Voucher này đã ngừng bán.'), findsOneWidget);
+    expect(find.text('Thử lại'), findsNothing);
+    await tester.tap(find.text('Xem ưu đãi khác'));
+    await tester.pumpAndSettle();
+    expect(find.text('mo'), findsOneWidget);
+  });
+
+  testWidgets('doi mat khau: kiem tra xac nhan, gui dung API roi quay lai', (tester) async {
+    final (api, _, _, _) = await pumpApp(
+      tester,
+      routes: {'POST /auth/change-password': (_) => const FakeResponse.ok({'message': 'ok'})},
+      open: (c) => Navigator.pushNamed(c, AppRoutes.changePassword),
+    );
+    await tester.enterText(find.byKey(const Key('currentPasswordField')), 'matkhau-cu');
+    await tester.enterText(find.byKey(const Key('nextPasswordField')), 'matkhau-moi');
+    await tester.enterText(find.byKey(const Key('confirmPasswordField')), 'khac-nhau');
+    await tester.tap(find.widgetWithText(FilledButton, 'Đổi mật khẩu'));
+    await tester.pump();
+    expect(find.text('Mật khẩu xác nhận không khớp'), findsOneWidget);
+    expect(api.requests, isEmpty);
+    await tester.enterText(find.byKey(const Key('confirmPasswordField')), 'matkhau-moi');
+    await tester.tap(find.widgetWithText(FilledButton, 'Đổi mật khẩu'));
+    await tester.pumpAndSettle();
+    expect(api.calls('POST', '/auth/change-password').single.body, contains('matkhau-moi'));
+    expect(find.text('mo'), findsOneWidget);
+  });
+
+  testWidgets('bam thong bao voucher da dung: mo vi dung muc Da dung', (tester) async {
+    late WalletProvider wallet;
+    final (_, _, _, tabs) = await pumpApp(
+      tester,
+      routes: {'GET /wallet': (_) => const FakeResponse.ok([])},
+      open: (c) {
+        wallet = c.read<WalletProvider>();
+        openNotificationTarget(c, 'VOUCHER_USED', {'voucherItemId': 'v1'});
+      },
+    );
+    expect(tabs.index, MainTabController.wallet);
+    expect(wallet.tab, 'USED');
+  });
+
+  testWidgets('tim kiem: nut bo loc bao so bo loc dang bat va bo duoc', (tester) async {
+    late SearchProvider search;
+    await pumpApp(
+      tester,
+      routes: {'GET /vouchers': (_) => const FakeResponse.ok({'items': [], 'total': 0})},
+      open: (c) {
+        search = c.read<SearchProvider>()
+          ..minPrice = 10000
+          ..sort = 'price_asc';
+        Navigator.push(c, MaterialPageRoute(builder: (_) => const SearchScreen()));
+      },
+    );
+    expect(search.activeFilterCount, 2);
+    expect(find.text('Bỏ 2 bộ lọc'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('clear-filters')));
+    await tester.pumpAndSettle();
+    expect(search.activeFilterCount, 0);
+    expect(find.byKey(const Key('clear-filters')), findsNothing);
   });
 
   testWidgets('trang chu: chon danh muc van giu cach sap xep Ban chay', (tester) async {

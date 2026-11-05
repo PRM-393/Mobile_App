@@ -132,7 +132,7 @@ class _PaymentResultScreenState extends State<PaymentResultScreen> with WidgetsB
       'PAID' => (Icons.hourglass_bottom, AppColors.secondary, 'Đã nhận thanh toán', 'Đang phát hành voucher...'),
       'CANCELLED' => (Icons.cancel, AppColors.danger, 'Đơn hàng đã hủy', 'Thanh toán không thành công hoặc đã quá 15 phút giữ chỗ.'),
       'PAYMENT_MISMATCH' => (Icons.report, AppColors.danger, 'Số tiền không khớp', 'Bộ phận hỗ trợ sẽ hoàn lại số tiền bạn đã thanh toán.'),
-      'REFUNDED_OVERSOLD' => (Icons.currency_exchange, AppColors.danger, 'Voucher đã hết', 'Bạn được hoàn 100% số tiền đã thanh toán.'),
+      'REFUNDED_OVERSOLD' => (Icons.currency_exchange, AppColors.danger, 'Voucher đã hết', 'Bạn sẽ được hoàn 100% số tiền đã thanh toán và nhận thông báo khi tiền được chuyển lại.'),
       _ => (Icons.schedule, AppColors.secondary, 'Đang chờ thanh toán', 'Hoàn tất thanh toán trên trang payOS rồi quay lại đây, kết quả sẽ tự cập nhật. Đơn được lưu ở tab Đơn hàng.'),
     };
     final canPay = pending && !expired;
