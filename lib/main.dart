@@ -18,6 +18,7 @@ import 'services/token_storage.dart';
 import 'services/voucher_services.dart';
 import 'services/wallet_cache.dart';
 import 'theme/app_theme.dart';
+import 'utils/notification_router.dart';
 
 // Diem vao app khach hang: khoi tao service, khoi phuc phien dang nhap, dang ky Provider (Module 5)
 Future<void> main() async {
@@ -32,6 +33,8 @@ Future<void> main() async {
   final notifications = NotificationService();
   final preferences = await PreferencesService.create();
   await Future.wait([auth.hydrate(), notifications.init()]);
+
+  notifications.onTap = openNotificationPayload;
 
   final searchService = SearchService(api);
   final orderService = OrderService(api);
@@ -78,6 +81,12 @@ Future<void> main() async {
       child: const VoucherApp(),
     ),
   );
+
+  // Mo app bang cach bam thong bao: doi khung hinh dau tien roi mo dung man hinh
+  final launchPayload = await notifications.launchPayload();
+  if (launchPayload != null) {
+    WidgetsBinding.instance.addPostFrameCallback((_) => openNotificationPayload(launchPayload));
+  }
 }
 
 class VoucherApp extends StatelessWidget {
@@ -88,6 +97,7 @@ class VoucherApp extends StatelessWidget {
     title: 'Voucher Platform',
     debugShowCheckedModeBanner: false,
     theme: buildAppTheme(),
+    navigatorKey: AppRoutes.navigatorKey,
     initialRoute: AppRoutes.main,
     onGenerateRoute: AppRoutes.onGenerateRoute,
   );

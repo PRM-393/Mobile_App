@@ -7,7 +7,7 @@ const orderStatusLabels = {
   'PAID': 'Đã thanh toán',
   'FULFILLED': 'Đã phát hành voucher',
   'CANCELLED': 'Đã hủy',
-  'REFUNDED_OVERSOLD': 'Đã hoàn tiền (hết hàng)',
+  'REFUNDED_OVERSOLD': 'Hết hàng, hoàn 100% tiền',
   'PAYMENT_MISMATCH': 'Sai số tiền, chờ hoàn lại',
 };
 

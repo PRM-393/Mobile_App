@@ -81,9 +81,14 @@ class _SearchScreenState extends State<SearchScreen> {
         title: const Text('Tìm kiếm'),
         actions: [
           IconButton(
+            key: const Key('search-filter'),
             tooltip: 'Bộ lọc',
             onPressed: _filters,
-            icon: const Icon(Icons.tune_rounded),
+            icon: Badge(
+              isLabelVisible: search.activeFilterCount > 0,
+              label: Text('${search.activeFilterCount}'),
+              child: const Icon(Icons.tune_rounded),
+            ),
           ),
           IconButton(
             tooltip: 'Bản đồ',
@@ -142,6 +147,11 @@ class _SearchScreenState extends State<SearchScreen> {
                         },
                       ),
                     ),
+                  TextButton(
+                    key: const Key('clear-recent'),
+                    onPressed: search.clearRecentKeywords,
+                    child: const Text('Xóa lịch sử'),
+                  ),
                 ],
               ),
             ),
@@ -189,16 +199,26 @@ class _SearchScreenState extends State<SearchScreen> {
               AppSpacing.md,
               0,
             ),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                '${search.total} kết quả',
-                style: const TextStyle(
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textSecondary,
-                  fontSize: 13,
+            child: Row(
+              children: [
+                Text(
+                  '${search.total} kết quả',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textSecondary,
+                    fontSize: 13,
+                  ),
                 ),
-              ),
+                if (search.activeFilterCount > 0) ...[
+                  const Spacer(),
+                  TextButton.icon(
+                    key: const Key('clear-filters'),
+                    onPressed: search.clearFilters,
+                    icon: const Icon(Icons.filter_alt_off_outlined, size: 16),
+                    label: Text('Bỏ ${search.activeFilterCount} bộ lọc'),
+                  ),
+                ],
+              ],
             ),
           ),
           Expanded(

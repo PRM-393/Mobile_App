@@ -147,6 +147,8 @@ class ProfileScreen extends StatelessWidget {
                   ),
                   const Divider(indent: AppSpacing.md, endIndent: AppSpacing.md),
                   _menu(context, Icons.manage_accounts_outlined, 'Sửa hồ sơ', AppRoutes.profileEdit),
+                  const Divider(indent: AppSpacing.md, endIndent: AppSpacing.md),
+                  _menu(context, Icons.password_rounded, 'Đổi mật khẩu', AppRoutes.changePassword),
                 ],
               ),
             ),

@@ -113,11 +113,11 @@ class CartProvider extends ChangeNotifier {
     _commit(_items.where((e) => e.campaignId != campaignId).toList());
   }
 
-  // Cap nhat gia / ten moi nhat tu may chu, giam so luong neu ton kho hoac gioi han da thap hon
-  void syncWith(VoucherCampaign campaign) {
+  // Cap nhat gia / ten moi nhat tu may chu; so luong giam ve muc thuc te mua duoc (ton kho, gioi han con lai)
+  void syncWith(VoucherCampaign campaign, {int? buyable}) {
     final current = _items.where((e) => e.campaignId == campaign.id).firstOrNull;
     if (current == null) return;
-    final max = campaign.maxPerOrder;
+    final max = buyable ?? campaign.maxPerOrder;
     final quantity = max > 0 && current.quantity > max ? max : current.quantity;
     if (quantity == current.quantity && current.unitPrice == campaign.salePrice && current.title == campaign.title) return;
     _commit([

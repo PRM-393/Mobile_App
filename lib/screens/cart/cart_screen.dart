@@ -2,17 +2,22 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../models/campaign.dart';
+import '../../models/order.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/main_tab_controller.dart';
+import '../../providers/wallet_provider.dart';
 import '../../routes.dart';
 import '../../services/api_client.dart';
 import '../../services/voucher_services.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/format.dart';
+import '../../utils/purchase_quota.dart';
 import '../../widgets/common.dart';
 import '../checkout/checkout_screen.dart';
 
-// Gio hang: voucher da chon, doi so luong, xoa, mua tung voucher. Mo gio la lay lai gia va ton kho tu may chu.
+// Gio hang: voucher da chon kem so luong thuc te mua duoc (ton kho + gioi han moi tai khoan), mua tung voucher.
+// Mo gio la lay lai gia, ton kho va so da mua tu may chu.
 class CartScreen extends StatefulWidget {
   const CartScreen({super.key});
 
@@ -23,6 +28,8 @@ class CartScreen extends StatefulWidget {
 class _CartScreenState extends State<CartScreen> {
   final Map<String, VoucherCampaign> _live = {};
   final Set<String> _gone = {};
+  // So luong thuc te mua duoc cua tung voucher
+  final Map<String, int> _buyable = {};
   bool _loading = true;
   bool _offline = false;
 
@@ -35,16 +42,31 @@ class _CartScreenState extends State<CartScreen> {
   Future<void> _load() async {
     final search = context.read<SearchService>();
     final cart = context.read<CartProvider>();
+    final wallet = context.read<WalletProvider?>();
+    final loggedIn = context.read<AuthProvider>().isLoggedIn;
+    final orderService = context.read<OrderService>();
     setState(() {
       _loading = true;
       _offline = false;
     });
+    var orders = const <Order>[];
+    if (loggedIn) {
+      try {
+        orders = await orderService.myOrders();
+      } catch (_) {
+        // khong tai duoc thi may chu van kiem tra gioi han khi tao don
+      }
+    }
+    final now = DateTime.now();
     await Future.wait(cart.items.map((item) async {
       try {
         final campaign = await search.detail(item.campaignId);
+        final quota = remainingPurchaseQuota(campaign, wallet?.items ?? const [], orders, now);
+        final buyable = buyableQuantity(campaign, quota);
         _live[item.campaignId] = campaign;
+        _buyable[item.campaignId] = buyable;
         _gone.remove(item.campaignId);
-        cart.syncWith(campaign);
+        cart.syncWith(campaign, buyable: buyable);
       } on ApiException catch (e) {
         if (e.isNetworkError) {
           _offline = true;
@@ -86,19 +108,14 @@ class _CartScreenState extends State<CartScreen> {
               child: ListView(
                 padding: const EdgeInsets.all(AppSpacing.md),
                 children: [
-                  const InfoBanner(
-                    'Mỗi voucher được thanh toán thành một đơn riêng. Sau khi thanh toán, voucher nằm trong tab Ví voucher.',
-                    icon: Icons.info_outline,
-                  ),
                   if (_offline) ...[
-                    const SizedBox(height: AppSpacing.sm),
                     const InfoBanner(
                       'Mất kết nối: giá và số lượng còn lại có thể đã thay đổi.',
                       icon: Icons.cloud_off_outlined,
                       tone: StatusTone.warning,
                     ),
+                    const SizedBox(height: AppSpacing.sm),
                   ],
-                  const SizedBox(height: AppSpacing.sm),
                   for (final item in cart.items)
                     Padding(
                       key: ValueKey(item.campaignId),
@@ -106,6 +123,7 @@ class _CartScreenState extends State<CartScreen> {
                       child: _CartLine(
                         item: item,
                         campaign: _live[item.campaignId],
+                        buyable: _buyable[item.campaignId],
                         gone: _gone.contains(item.campaignId),
                         loading: _loading,
                         onBuy: _buy,
@@ -122,6 +140,7 @@ class _CartLine extends StatelessWidget {
   const _CartLine({
     required this.item,
     required this.campaign,
+    required this.buyable,
     required this.gone,
     required this.loading,
     required this.onBuy,
@@ -129,6 +148,7 @@ class _CartLine extends StatelessWidget {
 
   final CartItem item;
   final VoucherCampaign? campaign;
+  final int? buyable;
   final bool gone;
   final bool loading;
   final Future<void> Function(VoucherCampaign campaign, int quantity) onBuy;
@@ -139,8 +159,14 @@ class _CartLine extends StatelessWidget {
     final live = campaign;
     final now = DateTime.now();
     final onSale = live != null && live.isOnSaleAt(now);
-    final String? blocked = gone ? 'Ngừng bán' : (live != null && !onSale ? live.unavailableLabelAt(now) : null);
-    final max = live?.maxPerOrder;
+    final String? blocked = gone
+        ? 'Voucher này đã ngừng bán. Hãy xóa khỏi giỏ.'
+        : live != null && !onSale
+        ? '${live.unavailableLabelAt(now)}. Hãy xóa khỏi giỏ hoặc quay lại sau.'
+        : buyable == 0
+        ? 'Bạn đã đạt giới hạn mua của voucher này. Hãy xóa khỏi giỏ.'
+        : null;
+    final max = buyable;
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.md),
@@ -182,7 +208,7 @@ class _CartLine extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.sm),
             if (blocked != null)
-              InfoBanner('Voucher này: $blocked. Hãy xóa khỏi giỏ hoặc quay lại sau.', icon: Icons.block, tone: StatusTone.warning)
+              InfoBanner(blocked, icon: Icons.block, tone: StatusTone.warning)
             else ...[
               Row(
                 children: [
@@ -212,7 +238,7 @@ class _CartLine extends StatelessWidget {
                 child: FilledButton(
                   key: Key('cart-buy-${item.campaignId}'),
                   onPressed: onSale ? () => onBuy(live, item.quantity) : null,
-                  child: Text(loading && live == null ? 'Đang kiểm tra...' : 'Mua voucher này'),
+                  child: Text(loading && live == null ? 'Đang kiểm tra...' : 'Mua ${item.quantity} voucher'),
                 ),
               ),
             ],

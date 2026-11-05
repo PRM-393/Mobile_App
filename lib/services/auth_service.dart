@@ -51,6 +51,11 @@ class AuthService {
     authenticated: false,
   );
 
+  Future<void> changePassword(String currentPassword, String newPassword) => _api.post(
+    '/auth/change-password',
+    body: {'currentPassword': currentPassword, 'newPassword': newPassword},
+  );
+
   Future<LoginResponse> refresh(String refreshToken) async {
     final json = await _api.post(
       '/auth/refresh',

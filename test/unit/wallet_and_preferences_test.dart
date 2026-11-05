@@ -38,7 +38,7 @@ class RecordingNotifications extends NotificationService {
   final calls = <String>[];
 
   @override
-  Future<void> show(String title, String body) async => calls.add('$title|$body');
+  Future<void> show(String title, String body, {String? payload}) async => calls.add('$title|$body');
 }
 
 // May chu gia tra { data, error, meta } (F01)

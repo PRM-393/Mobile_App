@@ -7,6 +7,7 @@ import 'providers/auth_provider.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/brand/brand_screen.dart';
 import 'screens/cart/cart_screen.dart';
+import 'screens/profile/change_password_screen.dart';
 import 'screens/profile/profile_edit_screen.dart';
 import 'screens/auth/forgot_password_screen.dart';
 import 'screens/checkout/checkout_screen.dart';
@@ -26,6 +27,9 @@ import 'screens/wallet/wallet_voucher_screen.dart';
 class AppRoutes {
   AppRoutes._();
 
+  // Dieu huong tu ngoai cay widget (bam thong bao tren thanh trang thai)
+  static final navigatorKey = GlobalKey<NavigatorState>();
+
   static const main = '/';
   static const login = '/login';
   static const forgotPassword = '/forgot-password';
@@ -43,6 +47,7 @@ class AppRoutes {
   static const walletVoucher = '/wallet-voucher';
   static const brand = '/brand';
   static const profileEdit = '/profile-edit';
+  static const changePassword = '/change-password';
 
   // Cac man hinh can dang nhap (protected routes - Module 10, FR-AUTH-11)
   static const protected = {
@@ -57,6 +62,7 @@ class AppRoutes {
     favorites,
     walletVoucher,
     profileEdit,
+    changePassword,
   };
 
   // Mo man hinh; neu can dang nhap ma dang la Guest thi dang nhap truoc roi di tiep dung man hinh do,
@@ -96,6 +102,7 @@ class AppRoutes {
       walletVoucher => WalletVoucherScreen(voucher: args as VoucherItem),
       brand => BrandScreen(brandId: args as String),
       profileEdit => const ProfileEditScreen(),
+      changePassword => const ChangePasswordScreen(),
       notifications => const NotificationsScreen(),
       notificationSettings => const NotificationSettingsScreen(),
       favorites => const FavoritesScreen(),

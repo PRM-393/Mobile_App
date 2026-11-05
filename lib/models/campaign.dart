@@ -1,3 +1,4 @@
+import '../utils/format.dart';
 import 'json_utils.dart';
 
 // Doi tuong nghiep vu khop voi entity BE (SRS muc 7)
@@ -74,7 +75,6 @@ class VoucherCampaign {
     this.discountType,
     this.discountValue,
     this.maxDiscount,
-    this.comboItems,
     this.limitPerUser,
     this.stores = const [],
     this.distanceKm,
@@ -99,7 +99,6 @@ class VoucherCampaign {
   final String? discountType;
   final double? discountValue;
   final double? maxDiscount;
-  final String? comboItems;
   final int totalQuantity;
   final int soldQuantity;
   final int reservedQuantity;
@@ -115,12 +114,29 @@ class VoucherCampaign {
   final int reviewCount;
   final List<Map<String, dynamic>> reviews;
 
+  bool get isDiscount => voucherType == 'DISCOUNT';
+
+  // Ma giam gia khong co "gia goc": khach tra tien de lay ma, gia tri la muc giam khi dung tai cua hang.
+  // Gach ngang faceValue se khien ma "Giam 30%" trong nhu giam 85%.
+  String? get discountLabel {
+    if (!isDiscount || discountValue == null) return null;
+    if (discountType == 'PERCENT') {
+      final cap = maxDiscount != null && maxDiscount! > 0 ? ', tối đa ${formatVnd(maxDiscount!)}' : '';
+      return 'Giảm ${discountValue!.round()}%$cap';
+    }
+    return 'Giảm ${formatVnd(discountValue!)}';
+  }
+
+  // Gia tri quy ra tien cua mot voucher, dung cho tong gia tri trong vi (ma giam % tinh theo muc giam toi da)
+  double get walletValue {
+    if (!isDiscount) return faceValue;
+    return (discountType == 'PERCENT' ? maxDiscount : discountValue) ?? 0;
+  }
+
   // Ton kho kha dung = tong - da ban - dang giu cho (FR-CAMP-11)
   // Phan tram tiet kiem hien tren the voucher: giam theo % thi lay discountValue, con lai so gia ban voi gia tri
   int? get savingPercent {
-    if (voucherType == 'DISCOUNT' && discountType == 'PERCENT') {
-      return discountValue?.round();
-    }
+    if (isDiscount) return discountType == 'PERCENT' ? discountValue?.round() : null;
     if (faceValue <= 0 || salePrice >= faceValue) return null;
     return ((faceValue - salePrice) / faceValue * 100).round();
   }
@@ -155,14 +171,12 @@ class VoucherCampaign {
         image: json['image'] as String?,
         description: json['description'] as String?,
         terms: json['terms'] as String?,
-        // Tuong thich du lieu COMBO cu ma khong dua loai da bo vao giao dien.
         voucherType: json['voucherType'] == 'DISCOUNT' ? 'DISCOUNT' : 'PREPAID',
         salePrice: asDouble(json['salePrice']),
         faceValue: asDouble(json['faceValue']),
         discountType: json['discountType'] as String?,
         discountValue: asDoubleOrNull(json['discountValue']),
         maxDiscount: asDoubleOrNull(json['maxDiscount']),
-        comboItems: json['comboItems'] as String?,
         totalQuantity: asInt(json['totalQuantity']),
         soldQuantity: asInt(json['soldQuantity']),
         reservedQuantity: asInt(json['reservedQuantity']),

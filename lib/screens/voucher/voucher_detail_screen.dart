@@ -4,7 +4,9 @@ import 'package:provider/provider.dart';
 import '../../models/campaign.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/cart_provider.dart';
+import '../../providers/main_tab_controller.dart';
 import '../../routes.dart';
+import '../../services/api_client.dart';
 import '../../services/voucher_services.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/distance.dart';
@@ -96,6 +98,21 @@ class _VoucherDetailScreenState extends State<VoucherDetailScreen> {
       builder: (context, snap) {
         if (snap.connectionState != ConnectionState.done) {
           return const LoadingState();
+        }
+        final error = snap.error;
+        // Chien dich da ket thuc / tam dung (mo tu Yeu thich, Mua lai, thong bao): thu lai khong giup gi
+        if (error is ApiException && error.statusCode == 404) {
+          return Center(
+            child: EmptyState(
+              'Voucher này đã ngừng bán.',
+              icon: Icons.event_busy_outlined,
+              actionLabel: 'Xem ưu đãi khác',
+              onAction: () {
+                context.read<MainTabController>().go(MainTabController.home);
+                Navigator.popUntil(context, (route) => route.isFirst);
+              },
+            ),
+          );
         }
         if (snap.hasError) return ErrorState(snap.error.toString(), onRetry: _reload);
         return _Detail(campaign: snap.data!, onChanged: _reload);
@@ -208,7 +225,14 @@ class _Detail extends StatelessWidget {
                                   color: AppColors.primary,
                                 ),
                               ),
-                              if (c.faceValue > c.salePrice)
+                              if (c.discountLabel != null)
+                                Text(
+                                  c.discountLabel!,
+                                  style: const TextStyle(
+                                    color: AppColors.textSecondary,
+                                  ),
+                                )
+                              else if (c.faceValue > c.salePrice)
                                 Text(
                                   formatVnd(c.faceValue),
                                   style: const TextStyle(

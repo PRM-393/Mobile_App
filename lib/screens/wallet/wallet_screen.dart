@@ -61,7 +61,7 @@ class _WalletScreenState extends State<WalletScreen> {
                 final active = items.where((e) => e.canRedeem).toList();
                 final value = active.fold<double>(
                   0,
-                  (sum, e) => sum + (e.campaign?.faceValue ?? 0),
+                  (sum, e) => sum + (e.campaign?.walletValue ?? 0),
                 );
                 return Padding(
                   padding: const EdgeInsets.fromLTRB(
