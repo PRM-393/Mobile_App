@@ -75,7 +75,6 @@ class VoucherCampaign {
     this.discountType,
     this.discountValue,
     this.maxDiscount,
-    this.comboItems,
     this.limitPerUser,
     this.stores = const [],
     this.distanceKm,
@@ -100,7 +99,6 @@ class VoucherCampaign {
   final String? discountType;
   final double? discountValue;
   final double? maxDiscount;
-  final String? comboItems;
   final int totalQuantity;
   final int soldQuantity;
   final int reservedQuantity;
@@ -173,14 +171,12 @@ class VoucherCampaign {
         image: json['image'] as String?,
         description: json['description'] as String?,
         terms: json['terms'] as String?,
-        // Tuong thich du lieu COMBO cu ma khong dua loai da bo vao giao dien.
         voucherType: json['voucherType'] == 'DISCOUNT' ? 'DISCOUNT' : 'PREPAID',
         salePrice: asDouble(json['salePrice']),
         faceValue: asDouble(json['faceValue']),
         discountType: json['discountType'] as String?,
         discountValue: asDoubleOrNull(json['discountValue']),
         maxDiscount: asDoubleOrNull(json['maxDiscount']),
-        comboItems: json['comboItems'] as String?,
         totalQuantity: asInt(json['totalQuantity']),
         soldQuantity: asInt(json['soldQuantity']),
         reservedQuantity: asInt(json['reservedQuantity']),
