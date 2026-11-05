@@ -6,6 +6,7 @@ import '../../providers/search_provider.dart';
 import '../../services/voucher_services.dart';
 import '../../routes.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/cart_button.dart';
 import '../../widgets/common.dart';
 import '../../widgets/voucher_card.dart';
 import '../../utils/distance.dart';
@@ -89,6 +90,7 @@ class _SearchScreenState extends State<SearchScreen> {
             onPressed: _map,
             icon: const Icon(Icons.map_outlined),
           ),
+          const CartButton(),
         ],
       ),
       body: Column(

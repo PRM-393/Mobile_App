@@ -128,6 +128,22 @@ class VoucherCampaign {
   int get availableQuantity =>
       (totalQuantity - soldQuantity - reservedQuantity).clamp(0, totalQuantity);
 
+  // BR-01: moi lan mua khong qua gioi han moi tai khoan (mac dinh 5) va ton kho con lai
+  int get maxPerOrder {
+    final limit = limitPerUser ?? 5;
+    return availableQuantity < limit ? availableQuantity : limit;
+  }
+
+  bool isOnSaleAt(DateTime now) =>
+      availableQuantity > 0 && status == 'PUBLISHED' && !now.isBefore(saleStartAt) && now.isBefore(saleEndAt);
+
+  // Ly do khong mua duoc, hien dung tinh huong thay vi gop chung "het hang / ngung ban"
+  String unavailableLabelAt(DateTime now) {
+    if (status == 'SOLD_OUT' || availableQuantity == 0) return 'Hết hàng';
+    if (status == 'PUBLISHED' && now.isBefore(saleStartAt)) return 'Chưa mở bán';
+    return 'Ngừng bán';
+  }
+
   factory VoucherCampaign.fromJson(Map<String, dynamic> json) =>
       VoucherCampaign(
         id: json['id'] as String,

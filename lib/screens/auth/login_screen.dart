@@ -94,9 +94,12 @@ class _LoginScreenState extends State<LoginScreen> {
     }),
   };
 
-  // Quay ve man hinh chinh; cac tab can dang nhap se tu hien noi dung
+  // Quay lai dung man hinh truoc do (khong ve trang chu de khach khong mat voucher dang xem).
+  // Dang nhap ngay trong route can bao ve thi route tu thay bang noi dung, khong can pop.
   void _done() {
-    if (mounted) Navigator.popUntil(context, (route) => route.isFirst);
+    if (mounted && ModalRoute.of(context)?.settings.name == AppRoutes.login) {
+      Navigator.pop(context);
+    }
   }
 
   void _changeEmail() => setState(() {

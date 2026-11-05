@@ -11,6 +11,7 @@ class PreferencesService {
   static const maxRecentKeywords = 8;
   static const _recentKeywordsKey = 'recent_keywords';
   static const _lastNotifiedKey = 'last_notified_at';
+  static const _cartKey = 'cart_items';
 
   static Future<PreferencesService> create() async =>
       PreferencesService(await SharedPreferences.getInstance());
@@ -42,8 +43,14 @@ class PreferencesService {
 
   Future<void> setLastNotifiedAt(DateTime value) => _prefs.setString(_lastNotifiedKey, value.toUtc().toIso8601String());
 
+  // ---- Gio hang: danh sach voucher da chon (JSON) ----
+  String? get cartJson => _prefs.getString(_cartKey);
+
+  Future<void> setCartJson(String json) => _prefs.setString(_cartKey, json);
+
   // Dang xuat: xoa du lieu cua tai khoan cu
   Future<void> clearUserData() async {
+    await _prefs.remove(_cartKey);
     await _prefs.remove(_lastNotifiedKey);
     await _prefs.remove(_recentKeywordsKey);
   }

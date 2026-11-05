@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../models/engage.dart';
 import '../../providers/main_tab_controller.dart';
 import '../../providers/notification_provider.dart';
+import '../../providers/wallet_provider.dart';
 import '../../routes.dart';
 import '../../services/voucher_services.dart';
 import '../../theme/app_theme.dart';
@@ -44,6 +45,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     } else if (n.data['refundId'] != null) {
       await AppRoutes.push(context, AppRoutes.refundList);
     } else if (n.data['voucherItemId'] != null) {
+      context.read<WalletProvider?>()?.selectTab(n.type == 'VOUCHER_USED' ? 'USED' : 'ACTIVE');
       context.read<MainTabController>().go(MainTabController.wallet);
       Navigator.popUntil(context, (route) => route.isFirst);
     } else if (campaignId != null) {
