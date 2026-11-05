@@ -66,7 +66,7 @@ void main() {
   testWidgets('vi rong thi hien thong bao trong', (tester) async {
     await tester.pumpWidget(buildApp(walletApi([])));
     await tester.pumpAndSettle();
-    expect(find.text('Không có voucher nào trong mục này.'), findsOneWidget);
+    expect(find.text('Bạn chưa có voucher nào. Voucher đã thanh toán sẽ nằm ở đây.'), findsOneWidget);
   });
 
   testWidgets('mat mang: hien vi da luu kem banner, an nut tao ma va noi ro ly do (LIM-07)', (tester) async {

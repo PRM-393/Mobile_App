@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import 'package:url_launcher/url_launcher.dart';
-
 import '../../models/order.dart';
 import '../../providers/main_tab_controller.dart';
+import '../../providers/wallet_provider.dart';
 import '../../routes.dart';
 import '../checkout/payment_result_screen.dart';
 import '../../services/voucher_services.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/format.dart';
+import '../../utils/payment_link.dart';
 import '../../widgets/common.dart';
 
 // FR-ORDER-09: lich su don hang kem trang thai thanh toan; FR-ORDER-12: thanh toan lai trong 15 phut giu cho
@@ -43,16 +43,15 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
   }
 
   Future<void> _refresh() async {
-    setState(() => _future = context.read<OrderService>().myOrders());
+    setState(() { _future = context.read<OrderService>().myOrders(); });
     await _future;
   }
 
-  // Lay link payOS cu tu may chu roi mo man ket qua (man nay tu mo payOS / thanh toan thu)
+  // Lay link payOS tu may chu, mo trang thanh toan roi sang man ket qua de theo doi
   Future<void> _retry(Order order) async {
     try {
       final result = await context.read<OrderService>().retryPayment(order.id);
-      final uri = Uri.tryParse(result.paymentUrl ?? '');
-      if (uri != null && uri.hasScheme) await launchUrl(uri, mode: LaunchMode.externalApplication);
+      await openPaymentLink(result.paymentUrl);
       if (!mounted) return;
       await AppRoutes.push(
         context,
@@ -67,6 +66,17 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
 
   Future<void> _open(Order order) async {
     await AppRoutes.push(context, AppRoutes.paymentResult, arguments: PaymentResultArgs(order: order));
+    if (mounted) await _refresh();
+  }
+
+  // Don da phat hanh: nhay thang toi voucher trong vi
+  void _openWallet() {
+    context.read<WalletProvider?>()?.selectTab('ACTIVE');
+    context.read<MainTabController>().go(MainTabController.wallet);
+  }
+
+  Future<void> _buyAgain(Order order) async {
+    await AppRoutes.push(context, AppRoutes.voucherDetail, arguments: order.campaignId);
     if (mounted) await _refresh();
   }
 
@@ -108,6 +118,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
             itemBuilder: (context, i) {
               final o = orders[i];
               final canRetry = o.canRetry(DateTime.now());
+              final expired = o.status == 'PENDING' && !canRetry;
               return Card(
                 key: ValueKey(o.id),
                 clipBehavior: Clip.antiAlias,
@@ -132,8 +143,8 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
                               ),
                             ),
                             StatusPill(
-                              orderStatusLabels[o.status] ?? o.status,
-                              tone: _statusTone(o.status),
+                              expired ? 'Hết thời gian giữ chỗ' : orderStatusLabels[o.status] ?? o.status,
+                              tone: expired ? StatusTone.danger : _statusTone(o.status),
                             ),
                           ],
                         ),
@@ -190,6 +201,27 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
                                 ),
                                 onPressed: () => _retry(o),
                                 child: const Text('Thanh toán lại'),
+                              )
+                            else if (o.status == 'FULFILLED')
+                              FilledButton(
+                                key: Key('order-wallet-${o.id}'),
+                                style: FilledButton.styleFrom(
+                                  minimumSize: const Size(0, 40),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: AppSpacing.md,
+                                  ),
+                                ),
+                                onPressed: _openWallet,
+                                child: const Text('Xem voucher'),
+                              )
+                            else if (expired || o.status == 'CANCELLED')
+                              OutlinedButton(
+                                key: Key('order-again-${o.id}'),
+                                style: OutlinedButton.styleFrom(
+                                  minimumSize: const Size(0, 40),
+                                ),
+                                onPressed: () => _buyAgain(o),
+                                child: const Text('Mua lại'),
                               )
                             else
                               TextButton(

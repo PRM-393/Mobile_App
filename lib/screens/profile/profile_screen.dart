@@ -11,6 +11,27 @@ import 'profile_edit_screen.dart';
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
 
+  // Tranh bam nham o cuoi man hinh lam mat phien va gio hang
+  Future<void> _confirmLogout(BuildContext context) async {
+    final auth = context.read<AuthProvider>();
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Đăng xuất?'),
+        content: const Text('Giỏ hàng trên máy này sẽ được xóa. Voucher đã mua vẫn nằm trong ví của bạn.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Ở lại')),
+          TextButton(
+            key: const Key('confirm-logout'),
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Đăng xuất'),
+          ),
+        ],
+      ),
+    );
+    if (ok == true) await auth.logout();
+  }
+
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
@@ -84,15 +105,19 @@ class ProfileScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: AppSpacing.md),
-          if (user == null)
+          if (user == null) ...[
             FilledButton(
               onPressed: () => Navigator.pushNamed(context, AppRoutes.login),
               child: const Text('Đăng nhập'),
-            )
-          else ...[
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Card(child: _menu(context, Icons.shopping_cart_outlined, 'Giỏ hàng', AppRoutes.cart)),
+          ] else ...[
             Card(
               child: Column(
                 children: [
+                  _menu(context, Icons.shopping_cart_outlined, 'Giỏ hàng', AppRoutes.cart),
+                  const Divider(indent: AppSpacing.md, endIndent: AppSpacing.md),
                   _menu(
                     context,
                     Icons.favorite_border,
@@ -139,7 +164,7 @@ class ProfileScreen extends StatelessWidget {
                 foregroundColor: AppColors.danger,
                 side: const BorderSide(color: AppColors.danger),
               ),
-              onPressed: auth.logout,
+              onPressed: () => _confirmLogout(context),
               icon: const Icon(Icons.logout),
               label: const Text('Đăng xuất'),
             ),

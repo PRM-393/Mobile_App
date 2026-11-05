@@ -12,7 +12,7 @@
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:launchMode="singleTop"
+            android:launchMode="singleTask"
             android:taskAffinity=""
             android:theme="@style/LaunchTheme"
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
@@ -29,6 +29,15 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+            <!-- Link chi dua app dang mo len truoc; khong de Flutter dieu huong theo link (se day them trang chu de man ket qua) -->
+            <meta-data android:name="flutter_deeplinking_enabled" android:value="false"/>
+            <!-- Trang ket qua payOS mo voucherplatform://payment-return de dua khach quay lai app dang mo -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="voucherplatform" android:host="payment-return"/>
             </intent-filter>
         </activity>
         <!-- Don't delete the meta-data below.

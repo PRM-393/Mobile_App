@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../models/engage.dart';
+import '../../providers/main_tab_controller.dart';
 import '../../routes.dart';
 import '../../services/voucher_services.dart';
 import '../../theme/app_theme.dart';
@@ -25,23 +26,30 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
     _future = context.read<EngageService>().myFavorites();
   }
 
+  void _reload() {
+    if (mounted) setState(() { _future = context.read<EngageService>().myFavorites(); });
+  }
+
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Voucher yêu thích')),
+    appBar: AppBar(title: const Text('Yêu thích')),
     body: FutureBuilder<List<Favorite>>(
       future: _future,
       builder: (context, snap) {
         if (snap.connectionState != ConnectionState.done) {
           return const LoadingState();
         }
-        if (snap.hasError) return ErrorState(snap.error.toString());
+        if (snap.hasError) return ErrorState(snap.error.toString(), onRetry: _reload);
         final items = snap.data!;
         if (items.isEmpty) {
           return EmptyState(
-            'Chưa có voucher yêu thích nào',
+            'Chưa có voucher hoặc thương hiệu yêu thích nào',
             icon: Icons.favorite_border,
             actionLabel: 'Khám phá ưu đãi',
-            onAction: () => Navigator.maybePop(context),
+            onAction: () {
+              context.read<MainTabController>().go(MainTabController.home);
+              Navigator.popUntil(context, (route) => route.isFirst);
+            },
           );
         }
         return ListView.separated(
@@ -66,11 +74,14 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                     : [if (f.brandName != null) f.brandName!, if (f.salePrice != null) formatVnd(f.salePrice!)].join(' · ')),
                 trailing: const Icon(Icons.chevron_right),
                 // F06: thuong hieu -> trang thuong hieu; voucher -> chi tiet
-                onTap: () => Navigator.pushNamed(
-                  context,
-                  f.isBrand ? AppRoutes.brand : AppRoutes.voucherDetail,
-                  arguments: f.targetId,
-                ),
+                onTap: () async {
+                  await Navigator.pushNamed(
+                    context,
+                    f.isBrand ? AppRoutes.brand : AppRoutes.voucherDetail,
+                    arguments: f.targetId,
+                  );
+                  _reload();
+                },
               ),
             );
           },

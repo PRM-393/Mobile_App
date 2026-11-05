@@ -43,14 +43,17 @@ class _BrandScreenState extends State<BrandScreen> {
   }
 
   Future<void> _reload() async {
-    setState(() => _future = context.read<SearchService>().brandPage(widget.brandId));
+    setState(() { _future = context.read<SearchService>().brandPage(widget.brandId); });
     await _future;
   }
 
   Future<void> _toggleFollow(BrandPage brand) async {
-    if (!context.read<AuthProvider>().isLoggedIn) {
+    final auth = context.read<AuthProvider>();
+    if (!auth.isLoggedIn) {
       await Navigator.pushNamed(context, AppRoutes.login);
-      return;
+      if (!auth.isLoggedIn || !mounted) return;
+      await _loadFollowing();
+      if (_following || !mounted) return; // da theo doi tu truoc
     }
     setState(() => _busy = true);
     try {

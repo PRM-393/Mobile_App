@@ -6,6 +6,7 @@ import 'models/order.dart';
 import 'providers/auth_provider.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/brand/brand_screen.dart';
+import 'screens/cart/cart_screen.dart';
 import 'screens/profile/profile_edit_screen.dart';
 import 'screens/auth/forgot_password_screen.dart';
 import 'screens/checkout/checkout_screen.dart';
@@ -29,6 +30,7 @@ class AppRoutes {
   static const login = '/login';
   static const forgotPassword = '/forgot-password';
   static const voucherDetail = '/voucher';
+  static const cart = '/cart';
   static const checkout = '/checkout';
   static const paymentResult = '/payment-result';
   static const redeemQr = '/redeem';
@@ -57,16 +59,22 @@ class AppRoutes {
     profileEdit,
   };
 
-  // Mo man hinh; neu can dang nhap ma dang la Guest thi chuyen sang man dang nhap
+  // Mo man hinh; neu can dang nhap ma dang la Guest thi dang nhap truoc roi di tiep dung man hinh do,
+  // khach khong phai tim lai voucher dang chon
   static Future<void> push(
     BuildContext context,
     String name, {
     Object? arguments,
-  }) {
-    if (protected.contains(name) && !context.read<AuthProvider>().isLoggedIn) {
-      return Navigator.pushNamed(context, login);
+  }) async {
+    final navigator = Navigator.of(context);
+    if (protected.contains(name)) {
+      final auth = context.read<AuthProvider>();
+      if (!auth.isLoggedIn) {
+        await navigator.pushNamed(login);
+        if (!auth.isLoggedIn) return;
+      }
     }
-    return Navigator.pushNamed(context, name, arguments: arguments);
+    await navigator.pushNamed(name, arguments: arguments);
   }
 
   static Route<dynamic> onGenerateRoute(RouteSettings settings) {
@@ -76,7 +84,10 @@ class AppRoutes {
       login => const LoginScreen(),
       forgotPassword => ForgotPasswordScreen(email: args as String),
       voucherDetail => VoucherDetailScreen(campaignId: args as String),
-      checkout => CheckoutScreen(campaign: args as VoucherCampaign),
+      cart => const CartScreen(),
+      checkout => args is CheckoutArgs
+          ? CheckoutScreen(campaign: args.campaign, initialQuantity: args.quantity)
+          : CheckoutScreen(campaign: args as VoucherCampaign),
       paymentResult => PaymentResultScreen(args: args as PaymentResultArgs),
       redeemQr => RedeemQrScreen(voucher: args as VoucherItem),
       refundRequest => RefundRequestScreen(voucher: args as VoucherItem),
