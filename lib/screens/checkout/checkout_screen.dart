@@ -98,7 +98,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       try {
         await notifications.orderCreated();
       } catch (_) {}
-      await openPaymentLink(result.paymentUrl);
+      // Co ma QR thi hien ngay trong app; don cu chua co ma moi can mo trang payOS
+      if (result.order.paymentQr == null) await openPaymentLink(result.paymentUrl);
       if (!mounted) return;
       // Man ket qua tu hoi trang thai don tu may chu (FR-ORDER-05)
       _toResult(result);
@@ -116,7 +117,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     });
     try {
       final result = await context.read<OrderService>().retryPayment(order.id);
-      await openPaymentLink(result.paymentUrl);
+      if (result.order.paymentQr == null) await openPaymentLink(result.paymentUrl);
       if (mounted) _toResult(result);
     } catch (e) {
       if (mounted) setState(() => _error = e.toString());

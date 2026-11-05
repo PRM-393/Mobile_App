@@ -9,6 +9,7 @@ import 'package:voucher_platform_mobile/models/order.dart';
 import 'package:voucher_platform_mobile/providers/main_tab_controller.dart';
 import 'package:voucher_platform_mobile/providers/wallet_provider.dart';
 import 'package:voucher_platform_mobile/screens/checkout/payment_result_screen.dart';
+import 'package:voucher_platform_mobile/widgets/payment_qr_card.dart';
 import 'package:voucher_platform_mobile/screens/orders/order_history_screen.dart';
 import 'package:voucher_platform_mobile/services/api_client.dart';
 import 'package:voucher_platform_mobile/services/voucher_services.dart';
@@ -99,6 +100,35 @@ void main() {
     final before = calls;
     await tester.pump(const Duration(milliseconds: 500));
     expect(calls, before);
+  });
+
+  testWidgets('co ma QR: hien QR ngay trong app, co nut luu anh, het giu cho thi khong con QR', (tester) async {
+    final server = FakeServer();
+    server.handler = (r) => orderJson('PENDING');
+    final order = Order.fromJson({...orderJson('PENDING'), 'paymentQr': '00020101021238570010A000000727'});
+    await tester.pumpWidget(wrap(
+      server,
+      PaymentResultScreen(
+        args: PaymentResultArgs(order: order, paymentUrl: 'https://pay.payos.vn/web/abc'),
+        pollInterval: const Duration(minutes: 5),
+      ),
+    ));
+    expect(find.byKey(const Key('payment-qr')), findsOneWidget);
+    expect(find.byKey(const Key('save-qr')), findsOneWidget);
+    expect(find.text('Không quét được? Mở trang payOS'), findsOneWidget);
+    expect(find.text('Mở trang thanh toán payOS'), findsNothing);
+  });
+
+  test('anh QR luu ve la PNG nen trang', () async {
+    TestWidgetsFlutterBinding.ensureInitialized();
+    final bytes = await paymentQrPng('00020101021238570010A000000727');
+    expect(bytes.sublist(1, 4), 'PNG'.codeUnits);
+  });
+
+  test('Order doc paymentQr, chuoi rong coi nhu chua co', () {
+    expect(Order.fromJson({...orderJson('PENDING'), 'paymentQr': 'abc'}).paymentQr, 'abc');
+    expect(Order.fromJson({...orderJson('PENDING'), 'paymentQr': ''}).paymentQr, isNull);
+    expect(Order.fromJson(orderJson('PENDING')).paymentQr, isNull);
   });
 
   testWidgets('cong payOS loi luc tao don: nut tao lai lien ket goi thanh toan lai', (tester) async {
