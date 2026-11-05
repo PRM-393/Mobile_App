@@ -12,6 +12,7 @@ import '../../theme/app_theme.dart';
 import '../../utils/format.dart';
 import '../../utils/payment_link.dart';
 import '../../widgets/common.dart';
+import '../../widgets/payment_qr_card.dart';
 
 // Tham so mo man ket qua: don vua tao / thanh toan lai, kem link payOS neu co
 class PaymentResultArgs {
@@ -39,6 +40,7 @@ class _PaymentResultScreenState extends State<PaymentResultScreen> with WidgetsB
   late String? _paymentUrl = widget.args.paymentUrl ?? widget.args.order.paymentUrl;
   Timer? _timer;
   bool _busy = false;
+  bool _saving = false;
   String? _error;
 
   @override
@@ -99,11 +101,24 @@ class _PaymentResultScreenState extends State<PaymentResultScreen> with WidgetsB
         _paymentUrl = result.paymentUrl;
         if (_paymentUrl == null) _error = 'Chưa tạo được liên kết thanh toán payOS. Vui lòng thử lại sau ít phút.';
       });
-      if (_paymentUrl != null) await _openPayment();
+      if (_paymentUrl != null && result.order.paymentQr == null) await _openPayment();
     } catch (e) {
       if (mounted) setState(() => _error = e.toString());
     } finally {
       if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _saveQr(String qr) async {
+    final messenger = ScaffoldMessenger.of(context);
+    setState(() => _saving = true);
+    try {
+      await savePaymentQr(qr, 'thanh-toan-${_order.id.substring(0, 8)}');
+      messenger.showSnackBar(const SnackBar(content: Text('Đã lưu ảnh QR. Mở ứng dụng ngân hàng và chọn ảnh này để thanh toán.')));
+    } catch (_) {
+      messenger.showSnackBar(const SnackBar(content: Text('Không lưu được ảnh QR. Hãy kiểm tra quyền truy cập ảnh của ứng dụng.')));
+    } finally {
+      if (mounted) setState(() => _saving = false);
     }
   }
 
@@ -136,21 +151,30 @@ class _PaymentResultScreenState extends State<PaymentResultScreen> with WidgetsB
       _ => (Icons.schedule, AppColors.secondary, 'Đang chờ thanh toán', 'Hoàn tất thanh toán trên trang payOS rồi quay lại đây, kết quả sẽ tự cập nhật. Đơn được lưu ở tab Đơn hàng.'),
     };
     final canPay = pending && !expired;
+    final qr = canPay ? _order.paymentQr : null;
     return Scaffold(
-      appBar: AppBar(title: const Text('Kết quả thanh toán')),
+      appBar: AppBar(title: Text(canPay ? 'Thanh toán' : 'Kết quả thanh toán')),
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.lg),
         children: [
-          // Vong tron trang thai lon, mau theo ket qua don
-          Center(
-            key: ValueKey('status-${_order.status}'),
-            child: Container(
-              width: 104,
-              height: 104,
-              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-              child: Icon(icon, color: Colors.white, size: 56),
+          // Dang co ma QR thi uu tien ma; cac truong hop khac hien vong tron trang thai theo ket qua don
+          if (qr != null) ...[
+            PaymentQrCard(
+              data: qr,
+              amount: _order.totalAmount,
+              expiresAt: _order.reservedUntil,
+              onExpire: _refresh,
             ),
-          ),
+          ] else
+            Center(
+              key: ValueKey('status-${_order.status}'),
+              child: Container(
+                width: 104,
+                height: 104,
+                decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+                child: Icon(icon, color: Colors.white, size: 56),
+              ),
+            ),
           const SizedBox(height: AppSpacing.md),
           Text(
             title,
@@ -159,7 +183,9 @@ class _PaymentResultScreenState extends State<PaymentResultScreen> with WidgetsB
           ),
           const SizedBox(height: AppSpacing.xs),
           Text(
-            message,
+            qr != null
+                ? 'Chuyển khoản xong, kết quả sẽ tự cập nhật. Dùng một điện thoại thì lưu ảnh QR rồi chọn ảnh đó trong ứng dụng ngân hàng.'
+                : message,
             textAlign: TextAlign.center,
             style: const TextStyle(color: AppColors.textSecondary, height: 1.45),
           ),
@@ -196,13 +222,17 @@ class _PaymentResultScreenState extends State<PaymentResultScreen> with WidgetsB
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            if (canPay && _paymentUrl != null)
+            if (qr != null)
+              PrimaryButton(key: const Key('save-qr'), label: 'Lưu ảnh QR', icon: Icons.download_outlined, loading: _saving, onPressed: () => _saveQr(qr)),
+            if (canPay && qr == null && _paymentUrl != null)
               PrimaryButton(key: const Key('open-payos'), label: 'Mở trang thanh toán payOS', icon: Icons.open_in_new, onPressed: _openPayment),
             if (canPay && _paymentUrl == null)
               PrimaryButton(key: const Key('retry-payos'), label: 'Tạo lại liên kết payOS', loading: _busy, onPressed: _createLink),
             if (canPay) ...[
               const SizedBox(height: AppSpacing.sm),
               OutlinedButton.icon(onPressed: _refresh, icon: const Icon(Icons.refresh), label: const Text('Kiểm tra lại')),
+              if (qr != null && _paymentUrl != null)
+                TextButton(key: const Key('open-payos'), onPressed: _openPayment, child: const Text('Không quét được? Mở trang payOS')),
               TextButton(key: const Key('go-orders'), onPressed: _goToOrders, child: const Text('Xem trong tab Đơn hàng')),
             ],
             if (expired || _order.status == 'CANCELLED')

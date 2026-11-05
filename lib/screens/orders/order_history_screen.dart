@@ -51,7 +51,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
   Future<void> _retry(Order order) async {
     try {
       final result = await context.read<OrderService>().retryPayment(order.id);
-      await openPaymentLink(result.paymentUrl);
+      if (result.order.paymentQr == null) await openPaymentLink(result.paymentUrl);
       if (!mounted) return;
       await AppRoutes.push(
         context,

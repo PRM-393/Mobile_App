@@ -40,6 +40,7 @@ class Order {
     this.reservedUntil,
     this.paidAt,
     this.paymentUrl,
+    this.paymentQr,
     this.campaignTitle,
   });
 
@@ -52,6 +53,8 @@ class Order {
   final DateTime? reservedUntil;
   final DateTime? paidAt;
   final String? paymentUrl;
+  // Chuoi VietQR cua payOS: app ve ma QR ngay tren man thanh toan
+  final String? paymentQr;
   final String? campaignTitle;
 
   // Trang thai ket thuc: dung hoi may chu
@@ -72,6 +75,7 @@ class Order {
         reservedUntil: asDateOrNull(json['reservedUntil']),
         paidAt: asDateOrNull(json['paidAt']),
         paymentUrl: json['paymentUrl'] as String?,
+        paymentQr: (json['paymentQr'] as String?)?.isEmpty ?? true ? null : json['paymentQr'] as String,
         campaignTitle: json['campaign'] is Map ? (json['campaign'] as Map)['title'] as String? : null,
       );
 }
