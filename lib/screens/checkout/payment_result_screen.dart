@@ -16,10 +16,12 @@ import '../../widgets/payment_qr_card.dart';
 
 // Tham so mo man ket qua: don vua tao / thanh toan lai, kem link payOS neu co
 class PaymentResultArgs {
-  const PaymentResultArgs({required this.order, this.paymentUrl});
+  const PaymentResultArgs({required this.order, this.paymentUrl, this.groupOrders = const []});
 
   final Order order;
   final String? paymentUrl;
+  // Cac don cung thanh toan tu gio hang (gom ca order); rong voi don mua rieng
+  final List<Order> groupOrders;
 }
 
 // FR-ORDER-05: sau khi mo trang thanh toan, app hoi trang thai don tu may chu (khong tin ket qua tren app)
@@ -37,6 +39,7 @@ class PaymentResultScreen extends StatefulWidget {
 // Quay lai app tu trang payOS (app resumed) thi hoi lai trang thai ngay, khong doi lan hoi ke tiep.
 class _PaymentResultScreenState extends State<PaymentResultScreen> with WidgetsBindingObserver {
   late Order _order = widget.args.order;
+  late List<Order> _group = widget.args.groupOrders;
   late String? _paymentUrl = widget.args.paymentUrl ?? widget.args.order.paymentUrl;
   Timer? _timer;
   bool _busy = false;
@@ -72,11 +75,25 @@ class _PaymentResultScreenState extends State<PaymentResultScreen> with WidgetsB
       });
       if (latest.isFinal) {
         _timer?.cancel();
+        await _refreshGroup();
+        if (!mounted) return;
         // Voucher moi ve vi: tai lai vi (kem thong bao cuc bo "voucher da ve vi")
         if (latest.status == 'FULFILLED') unawaited(context.read<WalletProvider>().load());
       }
     } catch (e) {
       if (mounted) setState(() => _error = e.toString());
+    }
+  }
+
+  // Don dai dien da co ket qua: lay ket qua tung don con lai trong nhom de hien dung tung voucher
+  Future<void> _refreshGroup() async {
+    if (_group.isEmpty) return;
+    final service = context.read<OrderService>();
+    try {
+      final latest = await Future.wait(_group.map((o) => service.getOrder(o.id)));
+      if (mounted) setState(() => _group = latest);
+    } catch (_) {
+      // van giu ket qua don dai dien; khach xem lai trong tab Don hang
     }
   }
 
@@ -152,6 +169,11 @@ class _PaymentResultScreenState extends State<PaymentResultScreen> with WidgetsB
     };
     final canPay = pending && !expired;
     final qr = canPay ? _order.paymentQr : null;
+    final total = canPay
+        ? _order.paymentAmount ?? _order.totalAmount
+        : _group.isEmpty
+            ? _order.totalAmount
+            : _group.fold<double>(0, (sum, o) => sum + o.totalAmount);
     return Scaffold(
       appBar: AppBar(title: Text(canPay ? 'Thanh toán' : 'Kết quả thanh toán')),
       body: ListView(
@@ -161,7 +183,7 @@ class _PaymentResultScreenState extends State<PaymentResultScreen> with WidgetsB
           if (qr != null) ...[
             PaymentQrCard(
               data: qr,
-              amount: _order.totalAmount,
+              amount: _order.paymentAmount ?? _order.totalAmount,
               expiresAt: _order.reservedUntil,
               onExpire: _refresh,
             ),
@@ -195,21 +217,32 @@ class _PaymentResultScreenState extends State<PaymentResultScreen> with WidgetsB
             icon: Icons.receipt_long_outlined,
             child: Column(
               children: [
-                DetailRow('Voucher', _order.campaignTitle ?? 'Đơn hàng'),
-                DetailRow('Mã đơn', '#${_order.id.length > 8 ? _order.id.substring(0, 8).toUpperCase() : _order.id.toUpperCase()}'),
-                DetailRow('Số lượng', 'x${_order.quantity}'),
+                if (_group.isEmpty) ...[
+                  DetailRow('Voucher', _order.campaignTitle ?? 'Đơn hàng'),
+                  DetailRow('Mã đơn', '#${_order.id.length > 8 ? _order.id.substring(0, 8).toUpperCase() : _order.id.toUpperCase()}'),
+                  DetailRow('Số lượng', 'x${_order.quantity}'),
+                ] else
+                  for (final o in _group)
+                    DetailRow(
+                      o.campaignTitle ?? 'Voucher',
+                      'x${o.quantity}${o.isFinal && o.status != 'FULFILLED' ? ' (không thành công)' : ''}',
+                    ),
                 DetailRow('Thời gian', formatDateTime(_order.createdAt)),
                 if (canPay && _order.reservedUntil != null)
                   DetailRow('Giữ chỗ đến', formatDateTime(_order.reservedUntil!)),
                 const Divider(height: AppSpacing.lg),
                 DetailRow(
                   'Tổng tiền',
-                  formatVnd(_order.totalAmount),
+                  formatVnd(total),
                   emphasize: true,
                 ),
               ],
             ),
           ),
+          if (canPay && _group.isEmpty && _order.paymentAmount != null) ...[
+            const SizedBox(height: AppSpacing.sm),
+            const InfoBanner('Mã này thanh toán chung cho các voucher đã chọn cùng lúc trong giỏ hàng.', icon: Icons.info_outline),
+          ],
           if (_error != null) ...[
             const SizedBox(height: AppSpacing.sm),
             InfoBanner(_error!, icon: Icons.error_outline, tone: StatusTone.danger),

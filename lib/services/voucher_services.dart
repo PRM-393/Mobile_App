@@ -70,6 +70,12 @@ class OrderService {
   Future<CreateOrderResult> create(String campaignId, int quantity) async => CreateOrderResult.fromJson(
       await _api.post('/orders', body: {'campaignId': campaignId, 'quantity': quantity}) as Map<String, dynamic>);
 
+  // Thanh toan cac voucher da chon trong gio bang mot ma QR tong
+  Future<CheckoutResult> checkout(List<({String campaignId, int quantity})> items) async => CheckoutResult.fromJson(
+      await _api.post('/orders/checkout', body: {
+        'items': [for (final i in items) {'campaignId': i.campaignId, 'quantity': i.quantity}],
+      }) as Map<String, dynamic>);
+
   Future<List<Order>> myOrders() async => asList(await _api.get('/orders/me'), Order.fromJson);
 
   // FR-ORDER-05: hoi trang thai don tu may chu

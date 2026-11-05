@@ -208,7 +208,60 @@ void main() {
         },
       );
       expect(find.textContaining('Ngừng bán'), findsOneWidget);
-      expect(find.byKey(const Key('cart-buy-c1')), findsNothing);
+      expect(tester.widget<Checkbox>(find.byKey(const Key('cart-select-c1'))).onChanged, isNull);
+    });
+
+    testWidgets('gio hang: mot nut thanh toan, chi gui voucher da chon, tong tien theo lua chon', (tester) async {
+      final (api, _, cart, _) = await pumpApp(
+        tester,
+        routes: {
+          ...detailRoutes,
+          'GET /vouchers/c2': (_) => FakeResponse.ok({..._campaign(), 'id': 'c2', 'title': 'Voucher hai'}),
+          'POST /orders/checkout': (_) => FakeResponse.ok({
+                'orders': [{..._order('PENDING'), 'paymentQr': '000201TEST', 'paymentAmount': 100000}],
+                'paymentUrl': 'https://pay.payos.vn/x',
+              }),
+          'GET /orders/o1': (_) => FakeResponse.ok({..._order('PENDING'), 'paymentQr': '000201TEST', 'paymentAmount': 100000}),
+        },
+        open: (c) {
+          final provider = c.read<CartProvider>();
+          provider.add(VoucherCampaign.fromJson(_campaign()));
+          provider.add(VoucherCampaign.fromJson({..._campaign(), 'id': 'c2', 'title': 'Voucher hai'}));
+          Navigator.pushNamed(c, AppRoutes.cart);
+        },
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Thanh toán 2 voucher'), findsOneWidget);
+      expect(find.text('Mua 1 voucher'), findsNothing);
+
+      await tester.tap(find.byKey(const Key('cart-select-c2')));
+      await tester.pump();
+      expect(find.text('Thanh toán 1 voucher'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('cart-pay')));
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pump(const Duration(milliseconds: 500));
+      final body = api.calls('POST', '/orders/checkout').single.body.toString();
+      expect(body, contains('c1'));
+      expect(body, isNot(contains('c2')));
+      expect(cart.items.single.campaignId, 'c2');
+      expect(find.byKey(const Key('payment-qr')), findsOneWidget);
+      await tester.pumpWidget(const SizedBox());
+    });
+
+    testWidgets('bo chon het thi nut thanh toan bi khoa', (tester) async {
+      await pumpApp(
+        tester,
+        routes: detailRoutes,
+        open: (c) {
+          c.read<CartProvider>().add(VoucherCampaign.fromJson(_campaign()));
+          Navigator.pushNamed(c, AppRoutes.cart);
+        },
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('cart-select-all')));
+      await tester.pump();
+      expect(find.text('Chọn voucher để thanh toán'), findsOneWidget);
     });
 
     testWidgets('mua tu gio: mang so luong sang man mua, tao don xong bo khoi gio', (tester) async {
@@ -216,7 +269,7 @@ void main() {
         tester,
         routes: {
           ...detailRoutes,
-          'POST /orders': (_) => FakeResponse.ok({'order': _order('PENDING'), 'paymentUrl': null}),
+          'POST /orders/checkout': (_) => FakeResponse.ok({'orders': [_order('PENDING')], 'paymentUrl': null}),
           'GET /orders/o1': (_) => FakeResponse.ok(_order('PENDING')),
         },
         open: (c) {
@@ -224,14 +277,11 @@ void main() {
           Navigator.pushNamed(c, AppRoutes.cart);
         },
       );
-      await tester.tap(find.byKey(const Key('cart-buy-c1')));
       await tester.pumpAndSettle();
-      expect(find.text('x3'), findsOneWidget);
-
-      await tester.tap(find.text('Xác nhận thanh toán'));
+      await tester.tap(find.byKey(const Key('cart-pay')));
       await tester.pump(const Duration(milliseconds: 100));
       await tester.pump(const Duration(milliseconds: 500));
-      expect(api.calls('POST', '/orders').single.body, contains('"quantity":3'));
+      expect(api.calls('POST', '/orders/checkout').single.body, contains('"quantity":3'));
       expect(cart.items, isEmpty);
       expect(find.text('Đang chờ thanh toán'), findsOneWidget);
       await tester.pumpWidget(const SizedBox());
@@ -394,7 +444,7 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(cart.items.single.quantity, 2); // con mua duoc 2 vi 1 voucher da hoan khong tinh
-      expect(find.text('Mua 2 voucher'), findsOneWidget);
+      expect(find.text('Thanh toán 2 voucher'), findsOneWidget);
       final plus = tester.widget<IconButton>(find.byKey(const Key('cart-plus-c1')));
       expect(plus.onPressed, isNull);
       owned = [];
@@ -416,7 +466,7 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(find.textContaining('đạt giới hạn mua'), findsOneWidget);
-      expect(find.byKey(const Key('cart-buy-c1')), findsNothing);
+      expect(find.text('Chọn voucher để thanh toán'), findsOneWidget);
     });
   });
 

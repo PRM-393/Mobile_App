@@ -9,14 +9,17 @@ import '../../providers/main_tab_controller.dart';
 import '../../providers/wallet_provider.dart';
 import '../../routes.dart';
 import '../../services/api_client.dart';
+import '../../services/notification_service.dart';
 import '../../services/voucher_services.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/format.dart';
+import '../../utils/payment_link.dart';
 import '../../utils/purchase_quota.dart';
 import '../../widgets/common.dart';
-import '../checkout/checkout_screen.dart';
+import '../checkout/payment_result_screen.dart';
 
-// Gio hang: voucher da chon kem so luong thuc te mua duoc (ton kho + gioi han moi tai khoan), mua tung voucher.
+// Gio hang: voucher kem so luong thuc te mua duoc (ton kho + gioi han moi tai khoan). Khach chon cac voucher
+// muon mua roi bam mot nut thanh toan o cuoi; may chu tao mot ma QR tong cho tat ca.
 // Mo gio la lay lai gia, ton kho va so da mua tu may chu.
 class CartScreen extends StatefulWidget {
   const CartScreen({super.key});
@@ -32,6 +35,10 @@ class _CartScreenState extends State<CartScreen> {
   final Map<String, int> _buyable = {};
   bool _loading = true;
   bool _offline = false;
+  // Mac dinh chon moi voucher mua duoc; chi nho nhung voucher khach bo chon
+  final Set<String> _unselected = {};
+  bool _paying = false;
+  String? _error;
 
   @override
   void initState() {
@@ -79,9 +86,57 @@ class _CartScreenState extends State<CartScreen> {
     if (mounted) setState(() => _loading = false);
   }
 
-  Future<void> _buy(VoucherCampaign campaign, int quantity) async {
-    await AppRoutes.push(context, AppRoutes.checkout, arguments: CheckoutArgs(campaign: campaign, quantity: quantity));
-    if (mounted) await _load();
+  bool _canBuy(CartItem item) {
+    final live = _live[item.campaignId];
+    return !_gone.contains(item.campaignId) &&
+        live != null &&
+        live.isOnSaleAt(DateTime.now()) &&
+        (_buyable[item.campaignId] ?? 0) > 0;
+  }
+
+  Future<void> _pay(List<CartItem> selected) async {
+    final auth = context.read<AuthProvider>();
+    if (!auth.isLoggedIn) {
+      await Navigator.pushNamed(context, AppRoutes.login);
+      if (!mounted || !auth.isLoggedIn) return;
+      // Dang nhap xong: tinh lai gioi han mua theo tai khoan roi de khach bam thanh toan
+      await _load();
+      return;
+    }
+    final cart = context.read<CartProvider>();
+    final orderService = context.read<OrderService>();
+    final notifications = context.read<NotificationService>();
+    setState(() {
+      _paying = true;
+      _error = null;
+    });
+    try {
+      final result = await orderService.checkout([
+        for (final item in selected) (campaignId: item.campaignId, quantity: item.quantity),
+      ]);
+      // Tu day don da ton tai: bo khoi gio de khach khong mua lan nua
+      for (final item in selected) {
+        cart.remove(item.campaignId);
+      }
+      try {
+        await notifications.orderCreated();
+      } catch (_) {}
+      final first = result.orders.first;
+      if (first.paymentQr == null) await openPaymentLink(result.paymentUrl);
+      if (!mounted) return;
+      await AppRoutes.push(
+        context,
+        AppRoutes.paymentResult,
+        arguments: PaymentResultArgs(order: first, paymentUrl: result.paymentUrl, groupOrders: result.orders),
+      );
+      if (mounted) await _load();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _error = e.toString());
+      await _load();
+    } finally {
+      if (mounted) setState(() => _paying = false);
+    }
   }
 
   void _explore() {
@@ -92,6 +147,10 @@ class _CartScreenState extends State<CartScreen> {
   @override
   Widget build(BuildContext context) {
     final cart = context.watch<CartProvider>();
+    final buyable = cart.items.where(_canBuy).toList();
+    final selected = buyable.where((e) => !_unselected.contains(e.campaignId)).toList();
+    final total = selected.fold<double>(0, (sum, e) => sum + e.subtotal);
+    final quantity = selected.fold<int>(0, (sum, e) => sum + e.quantity);
     return Scaffold(
       appBar: AppBar(title: Text(cart.items.isEmpty ? 'Giỏ hàng' : 'Giỏ hàng (${cart.totalQuantity})')),
       body: cart.items.isEmpty
@@ -116,6 +175,10 @@ class _CartScreenState extends State<CartScreen> {
                     ),
                     const SizedBox(height: AppSpacing.sm),
                   ],
+                  if (_error != null) ...[
+                    InfoBanner(_error!, icon: Icons.error_outline, tone: StatusTone.danger),
+                    const SizedBox(height: AppSpacing.sm),
+                  ],
                   for (final item in cart.items)
                     Padding(
                       key: ValueKey(item.campaignId),
@@ -125,10 +188,56 @@ class _CartScreenState extends State<CartScreen> {
                         campaign: _live[item.campaignId],
                         buyable: _buyable[item.campaignId],
                         gone: _gone.contains(item.campaignId),
-                        loading: _loading,
-                        onBuy: _buy,
+                        selected: _canBuy(item) && !_unselected.contains(item.campaignId),
+                        onSelected: (value) => setState(() {
+                          value ? _unselected.remove(item.campaignId) : _unselected.add(item.campaignId);
+                        }),
                       ),
                     ),
+                ],
+              ),
+            ),
+      bottomNavigationBar: cart.items.isEmpty
+          ? null
+          : StickyActionBar(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      Checkbox(
+                        key: const Key('cart-select-all'),
+                        value: buyable.isNotEmpty && selected.length == buyable.length,
+                        onChanged: buyable.isEmpty
+                            ? null
+                            : (value) => setState(() {
+                                  _unselected.clear();
+                                  if (value != true) _unselected.addAll(buyable.map((e) => e.campaignId));
+                                }),
+                      ),
+                      const Text('Chọn tất cả'),
+                      const Spacer(),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          const Text('Tổng tiền', style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+                          Text(
+                            formatVnd(total),
+                            key: const Key('cart-total'),
+                            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: AppColors.primary),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  PrimaryButton(
+                    key: const Key('cart-pay'),
+                    label: quantity == 0 ? 'Chọn voucher để thanh toán' : 'Thanh toán $quantity voucher',
+                    loading: _paying,
+                    onPressed: selected.isEmpty || _loading ? null : () => _pay(selected),
+                  ),
                 ],
               ),
             ),
@@ -142,16 +251,16 @@ class _CartLine extends StatelessWidget {
     required this.campaign,
     required this.buyable,
     required this.gone,
-    required this.loading,
-    required this.onBuy,
+    required this.selected,
+    required this.onSelected,
   });
 
   final CartItem item;
   final VoucherCampaign? campaign;
   final int? buyable;
   final bool gone;
-  final bool loading;
-  final Future<void> Function(VoucherCampaign campaign, int quantity) onBuy;
+  final bool selected;
+  final ValueChanged<bool> onSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -178,6 +287,11 @@ class _CartLine extends StatelessWidget {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  Checkbox(
+                    key: Key('cart-select-${item.campaignId}'),
+                    value: selected,
+                    onChanged: blocked != null || live == null ? null : (value) => onSelected(value ?? false),
+                  ),
                   BrandAvatar(imageUrl: item.image, size: 52),
                   const SizedBox(width: AppSpacing.sm + 4),
                   Expanded(
@@ -231,15 +345,6 @@ class _CartLine extends StatelessWidget {
                   const Spacer(),
                   Text(formatVnd(item.subtotal), style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900, color: AppColors.primary)),
                 ],
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton(
-                  key: Key('cart-buy-${item.campaignId}'),
-                  onPressed: onSale ? () => onBuy(live, item.quantity) : null,
-                  child: Text(loading && live == null ? 'Đang kiểm tra...' : 'Mua ${item.quantity} voucher'),
-                ),
               ),
             ],
           ],

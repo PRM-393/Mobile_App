@@ -41,6 +41,7 @@ class Order {
     this.paidAt,
     this.paymentUrl,
     this.paymentQr,
+    this.paymentAmount,
     this.campaignTitle,
   });
 
@@ -55,6 +56,8 @@ class Order {
   final String? paymentUrl;
   // Chuoi VietQR cua payOS: app ve ma QR ngay tren man thanh toan
   final String? paymentQr;
+  // Tong tien ma QR khi don thanh toan chung voi cac voucher khac trong gio; null voi don mua rieng
+  final double? paymentAmount;
   final String? campaignTitle;
 
   // Trang thai ket thuc: dung hoi may chu
@@ -76,6 +79,7 @@ class Order {
         paidAt: asDateOrNull(json['paidAt']),
         paymentUrl: json['paymentUrl'] as String?,
         paymentQr: (json['paymentQr'] as String?)?.isEmpty ?? true ? null : json['paymentQr'] as String,
+        paymentAmount: json['paymentAmount'] == null ? null : asDouble(json['paymentAmount']),
         campaignTitle: json['campaign'] is Map ? (json['campaign'] as Map)['title'] as String? : null,
       );
 }
@@ -89,6 +93,19 @@ class CreateOrderResult {
 
   factory CreateOrderResult.fromJson(Map<String, dynamic> json) => CreateOrderResult(
         order: Order.fromJson(json['order'] as Map<String, dynamic>),
+        paymentUrl: (json['paymentUrl'] as String?)?.isEmpty ?? true ? null : json['paymentUrl'] as String,
+      );
+}
+
+// Phan hoi khi thanh toan gio hang: moi voucher mot don, chung mot lien ket va ma QR
+class CheckoutResult {
+  const CheckoutResult({required this.orders, this.paymentUrl});
+
+  final List<Order> orders;
+  final String? paymentUrl;
+
+  factory CheckoutResult.fromJson(Map<String, dynamic> json) => CheckoutResult(
+        orders: (json['orders'] as List).map((e) => Order.fromJson(e as Map<String, dynamic>)).toList(),
         paymentUrl: (json['paymentUrl'] as String?)?.isEmpty ?? true ? null : json['paymentUrl'] as String,
       );
 }
